@@ -16,10 +16,20 @@ class UserSeeder extends Seeder
             ->firstOrFail();
 
         User::firstOrCreate(
-            ['email' => 'af@email.com'],
+            ['email' => 'aliyufari@gmail.com'],
             [
                 'name' => 'AF',
-                'password' => Hash::make('password'),
+                'password' => Hash::make('Fari@3031.'),
+                'email_verified_at' => now(),
+                'role_id' => $role->id,
+            ]
+        );
+
+        User::firstOrCreate(
+            ['email' => 'aslere00005@gmail.com'],
+            [
+                'name' => 'A S Lere',
+                'password' => Hash::make('Aslere00005'),
                 'email_verified_at' => now(),
                 'role_id' => $role->id,
             ]
