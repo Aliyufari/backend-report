@@ -1,7 +1,7 @@
 import AuthenticatedSessionController from '@/actions/App/Http/Controllers/Auth/AuthenticatedSessionController';
 import InputError from '@/components/input-error';
 import Spinner from '../components/Spinner';
-import AuthLayout from '@/layouts/auth-layout';
+import AuthLayout from '@/layouts/AuthLayout';
 import { register } from '@/routes';
 import { request } from '@/routes/password';
 import { Form, Head, Link } from '@inertiajs/react';

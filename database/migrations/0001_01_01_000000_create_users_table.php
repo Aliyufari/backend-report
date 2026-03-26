@@ -15,15 +15,20 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->uuid('id')->primary();
+            $table->string('avatar')->nullable();
             $table->string('name');
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
-            $table->foreignIdFor(Role::class, 'role_id');
-            $table->foreignIdFor(User::class, 'created_by')->nullable()->constrained()->cascadeOnDelete();
-            $table->foreignIdFor(User::class, 'updated_by')->nullable()->constrained()->cascadeOnDelete();
+            $table->foreignUuid('role_id')->constrained()->cascadeOnDelete();
+            $table->uuid('location_id')->nullable();
+            $table->string('location_type')->nullable();
+            $table->foreignUuid('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignUuid('updated_by')->nullable()->constrained('users')->nullOnDelete();
             $table->rememberToken();
             $table->timestamps();
+
+            $table->index(['location_type', 'location_id']);
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {

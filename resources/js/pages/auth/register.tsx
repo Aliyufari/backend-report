@@ -1,7 +1,7 @@
 import RegisteredUserController from '@/actions/App/Http/Controllers/Auth/RegisteredUserController';
 import InputError from '@/components/input-error';
 import Spinner from '../components/Spinner';
-import AuthLayout from '@/layouts/auth-layout';
+import AuthLayout from '@/layouts/AuthLayout';
 import { login } from '@/routes';
 import { Form, Head, Link } from '@inertiajs/react';
 import { Eye, EyeClosed } from 'lucide-react';

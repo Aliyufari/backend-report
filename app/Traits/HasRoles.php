@@ -2,73 +2,72 @@
 
 namespace App\Traits;
 
-use App\Enums\Role as RoleType;
+use App\Enums\Role as RoleEnum;
 use App\Models\Role as RoleModel;
 
 trait HasRoles
 {
-    /**
-     * Get the user's role as enum.
-     */
-    public function roleEnum(): ?RoleType
+    public function roleEnum(): ?RoleEnum
     {
-        return RoleType::tryFrom($this->role?->name);
+        return RoleEnum::tryFrom($this->role?->name);
     }
 
-    /**
-     * Check if user has a specific role.
-     */
-    public function hasRole(RoleType $role): bool
+    public function hasRole(RoleEnum $role): bool
     {
-        return $this->role && $this->role->name === $role->value;
+        return $this->role?->name === $role->value;
     }
 
-    /**
-     * Assign role to user.
-     */
-    public function assignRole(RoleType $role): void
+    public function assignRole(RoleEnum $role): void
     {
         $roleModel = RoleModel::where('name', $role->value)->firstOrFail();
-
-        $this->role()->associate($roleModel);
-        $this->save();
+        $this->role()->associate($roleModel)->save();
     }
 
-    /**
-     * Shortcut helpers
-     */
     public function isSuperAdmin(): bool
     {
-        return $this->hasRole(RoleType::SUPER_ADMIN);
+        return $this->hasRole(RoleEnum::SUPER_ADMIN);
     }
-
     public function isAdmin(): bool
     {
-        return $this->hasRole(RoleType::ADMIN);
+        return $this->hasRole(RoleEnum::ADMIN);
     }
-
     public function isGovernor(): bool
     {
-        return $this->hasRole(RoleType::GOVERNOR);
+        return $this->hasRole(RoleEnum::GOVERNOR);
     }
-
     public function isStateCoordinator(): bool
     {
-        return $this->hasRole(RoleType::STATE_COORDINATOR);
+        return $this->hasRole(RoleEnum::STATE_COORDINATOR);
     }
-
     public function isZonalCoordinator(): bool
     {
-        return $this->hasRole(RoleType::ZONAL_COORDINATOR);
+        return $this->hasRole(RoleEnum::ZONAL_COORDINATOR);
     }
-
     public function isLgaCoordinator(): bool
     {
-        return $this->hasRole(RoleType::LGA_COORDINATOR);
+        return $this->hasRole(RoleEnum::LGA_COORDINATOR);
     }
-
     public function isWardCoordinator(): bool
     {
-        return $this->hasRole(RoleType::WARD_COORDINATOR);
+        return $this->hasRole(RoleEnum::WARD_COORDINATOR);
+    }
+    public function isUser(): bool
+    {
+        return $this->hasRole(RoleEnum::USER);
+    }
+
+    public function canManageUsers(): bool
+    {
+        return $this->isSuperAdmin()
+            || $this->isAdmin()
+            || $this->isGovernor()
+            || $this->isStateCoordinator()
+            || $this->isZonalCoordinator()
+            || $this->isLgaCoordinator();
+    }
+
+    public function isLowestCoordinator(): bool
+    {
+        return $this->isWardCoordinator();
     }
 }

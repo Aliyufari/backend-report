@@ -1,5 +1,7 @@
 import '../css/app.css';
 
+import "@/echo";
+import { ToastContainer } from 'react-toastify';
 import { createInertiaApp } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
@@ -17,7 +19,12 @@ createInertiaApp({
     setup({ el, App, props }) {
         const root = createRoot(el);
 
-        root.render(<App {...props} />);
+        root.render(
+            <>
+                <App {...props} />
+                <ToastContainer position="top-right" autoClose={4000} />
+            </>
+        );
     },
     progress: {
         color: '#4B5563',
