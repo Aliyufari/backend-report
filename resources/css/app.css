@@ -1,7 +1,6 @@
 @import 'tailwindcss';
 
 @plugin 'tailwindcss-animate';
-/* @import "tw-animate-css"; */
 
 @source '../views';
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
@@ -65,7 +64,7 @@ body {
   background-color: #f2f2f2;
 }
 
-::-webkit-scrollbar {width: 0.2rem;}
+::-webkit-scrollbar { width: 0.2rem; }
 
 ::-webkit-scrollbar-thumb {
     border-radius: 0.5rem;
@@ -126,7 +125,7 @@ body {
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
 
-  /* ✅ FIX 1: Brand colors preserved in dark mode */
+  /* ✅ Brand colors preserved in dark mode */
   --primary: oklch(0.72 0.1804 147.4);
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.72 0.2577 29.23);
@@ -139,7 +138,7 @@ body {
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
 
-  /* ✅ FIX 2: Solid input background so text is visible */
+  /* ✅ Solid input background */
   --input: oklch(0.269 0 0);
 
   --ring: oklch(0.556 0 0);
@@ -164,5 +163,13 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* Fix input text color in both light and dark mode */
+  input:not([type='checkbox']):not([type='radio']),
+  textarea,
+  select {
+    @apply bg-white text-gray-900 placeholder:text-gray-400
+           dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder:text-zinc-500;
   }
 }
