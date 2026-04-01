@@ -1,0 +1,1 @@
+import{j as r}from"./app-CpLCtJut.js";import{L as e}from"./loader-CCqg8uF_.js";/* empty css            */import"./createLucideIcon-CL6k7ioB.js";const m=({size:s=18,color:t="white"})=>r.jsx("span",{className:"inline-block animate-spin",style:{color:t},children:r.jsx(e,{size:s})});export{m as default};
