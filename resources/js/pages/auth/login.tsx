@@ -5,7 +5,7 @@ import AuthLayout from '@/layouts/AuthLayout';
 import { register } from '@/routes';
 import { request } from '@/routes/password';
 import { Form, Head, Link } from '@inertiajs/react';
-import { Eye, EyeClosed } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'react-toastify';
 
@@ -19,11 +19,11 @@ export default function Login({ status, canResetPassword }: LoginProps) {
 
     return (
         <>
-            <Head title="Log in" />
+            <Head title="Log In" />
 
             <AuthLayout title="Welcome Back">
                 {status && (
-                    <div className="mb-4 text-center text-sm font-medium text-green-600">
+                    <div className="mb-4 rounded-lg border border-green-500/20 bg-green-500/10 px-4 py-3 text-center text-sm font-medium text-green-600">
                         {status}
                     </div>
                 )}
@@ -31,14 +31,31 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                 <Form
                     {...AuthenticatedSessionController.store.form()}
                     resetOnSuccess={['password']}
+                    disableWhileProcessing
+                    options={{
+                        preserveState: true,
+                        preserveScroll: true,
+                        replace: true
+                    }}
                     className="flex flex-col gap-5"
-                    onSuccess={() => toast.success('Logged in successfully!')}
-                    onError={() => toast.error('Login failed. Please check your credentials.')}
+                    onSuccess={() => {
+                        toast.success('Logged in successfully!');
+                    }}
+                    onError={() => {
+                        toast.error('Login failed. Please check your credentials.');
+                    }}
                 >
                     {({ processing, errors }) => (
                         <>
+                            {/* Email */}
                             <div>
-                                <label htmlFor="email" className="block w-full mb-1">Email:</label>
+                                <label
+                                    htmlFor="email"
+                                    className="mb-1 block text-sm font-medium text-foreground"
+                                >
+                                    Email
+                                </label>
+
                                 <input
                                     id="email"
                                     type="email"
@@ -47,20 +64,32 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                     autoFocus
                                     autoComplete="email"
                                     placeholder="johndoe@email.com"
-                                    className="w-full py-2 px-4 border border-gray-300 rounded-md outline-none focus:border-primary transition-colors"
+                                    className="w-full rounded-lg border border-border bg-background px-4 py-2.5 outline-none transition-colors focus:border-primary"
                                 />
+
                                 <InputError message={errors.email} />
                             </div>
 
+                            {/* Password */}
                             <div>
-                                <div className="flex items-center justify-between mb-1">
-                                    <label htmlFor="password">Password:</label>
+                                <div className="mb-1 flex items-center justify-between">
+                                    <label
+                                        htmlFor="password"
+                                        className="text-sm font-medium text-foreground"
+                                    >
+                                        Password
+                                    </label>
+
                                     {canResetPassword && (
-                                        <Link href={request()} className="text-xs text-primary underline underline-offset-2">
+                                        <Link
+                                            href={request()}
+                                            className="text-xs font-medium text-primary underline underline-offset-2"
+                                        >
                                             Forgot Password?
                                         </Link>
                                     )}
                                 </div>
+
                                 <div className="relative">
                                     <input
                                         id="password"
@@ -68,36 +97,75 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                         name="password"
                                         required
                                         autoComplete="current-password"
-                                        placeholder="xxxxxxxx"
-                                        className="w-full py-2 pl-4 pr-10 border border-gray-300 rounded-md outline-none focus:border-primary transition-colors"
+                                        placeholder="Enter your password"
+                                        className="w-full rounded-lg border border-border bg-background py-2.5 pl-4 pr-11 outline-none transition-colors focus:border-primary"
                                     />
-                                    <span onClick={() => setShowPassword(!showPassword)} className="absolute top-1/2 -translate-y-1/2 right-3 cursor-pointer text-gray-400">
-                                        {showPassword ? <EyeClosed size={20} /> : <Eye size={20} />}
-                                    </span>
+
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            setShowPassword((prev) => !prev)
+                                        }
+                                        className="absolute right-3 top-1/2 flex -translate-y-1/2 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
+                                        aria-label={
+                                            showPassword
+                                                ? 'Hide password'
+                                                : 'Show password'
+                                        }
+                                    >
+                                        {showPassword ? (
+                                            <EyeOff size={18} />
+                                        ) : (
+                                            <Eye size={18} />
+                                        )}
+                                    </button>
                                 </div>
+
                                 <InputError message={errors.password} />
                             </div>
 
+                            {/* Remember */}
                             <div className="flex items-center gap-2">
-                                <input type="checkbox" id="remember" name="remember" className="w-4 h-4 accent-primary cursor-pointer" />
-                                <label htmlFor="remember" className="cursor-pointer">Remember me</label>
+                                <input
+                                    type="checkbox"
+                                    id="remember"
+                                    name="remember"
+                                    className="h-4 w-4 cursor-pointer rounded border-border accent-primary"
+                                />
+
+                                <label
+                                    htmlFor="remember"
+                                    className="cursor-pointer text-sm text-foreground"
+                                >
+                                    Remember me
+                                </label>
                             </div>
 
+                            {/* Submit */}
                             <button
                                 type="submit"
                                 disabled={processing}
-                                className="w-full bg-primary hover:bg-green-500 text-white py-2 px-4 rounded-md transition-colors flex justify-center items-center gap-2 cursor-pointer disabled:opacity-70"
+                                className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 font-medium text-white transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
                             >
                                 {processing && <Spinner />}
-                                <span>Login</span>
+                                <span>
+                                    {processing ? 'Logging in...' : 'Login'}
+                                </span>
                             </button>
 
-                            <p className="text-center">
-                                Don't have an account?{' '}
-                                <Link href={register()} className="text-primary underline underline-offset-2">Sign up</Link>
+                            {/* Register */}
+                            <p className="text-center text-sm text-muted-foreground">
+                                Don&apos;t have an account?{' '}
+                                <Link
+                                    href={register()}
+                                    className="font-medium text-primary underline underline-offset-2"
+                                >
+                                    Sign up
+                                </Link>
                             </p>
 
-                            <p className="text-center text-zinc-400 text-xs">
+                            {/* Footer */}
+                            <p className="text-center text-xs text-muted-foreground">
                                 &copy; {new Date().getFullYear()} All Rights Reserved.
                             </p>
                         </>

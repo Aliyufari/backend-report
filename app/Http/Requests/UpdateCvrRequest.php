@@ -2,7 +2,10 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\CvrStatus;
+use App\Enums\CvrType;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rules\Enum;
 
 class UpdateCvrRequest extends FormRequest
 {
@@ -11,7 +14,7 @@ class UpdateCvrRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -21,8 +24,13 @@ class UpdateCvrRequest extends FormRequest
      */
     public function rules(): array
     {
+        $cvrId = $this->route('cvr')?->id;
+
         return [
-            //
+            'unique_id' => ['sometimes', 'uuid', 'unique:cvrs,unique_id,' . $cvrId],
+            'type'      => ['sometimes', new Enum(CvrType::class)],
+            'status'    => ['sometimes', new Enum(CvrStatus::class)],
+            'pu_id'     => ['sometimes', 'uuid', 'exists:pus,id'],
         ];
     }
 }

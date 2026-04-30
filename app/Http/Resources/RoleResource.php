@@ -19,8 +19,6 @@ class RoleResource extends JsonResource
         return [
             'id'    => $this->id,
             'name'  => ucwords(str_replace('_', ' ', $this->name)),
-            'value' => $this->id,
-            'label' => ucwords(str_replace('_', ' ', $this->name)),
             // 'can' => [
             //     'view' => $user?->can('view', $this->resource) ?? false,
             //     'update' => $user?->can('update', $this->resource) ?? false,

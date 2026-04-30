@@ -8,6 +8,9 @@ import {
     ShieldCheck,
     ChevronRight,
     CloudUpload,
+    IdCard,
+    FingerprintIcon,
+      
 } from "lucide-react";
 import useRole from "@/hooks/auth/useRole";
 
@@ -24,9 +27,9 @@ const AdminSideNavLinks = () => {
             excludes: [] as string[],
         },
         {
-            name: "Election Schedule",
-            path: "/elections/schedule",
-            compare: url.startsWith("/elections/schedule"),
+            name: "Election Countdown",
+            path: "/elections/countdown",
+            compare: url.startsWith("/elections/countdown"),
             icon: <CalendarClock size={16} />,
             excludes: [] as string[],
         },
@@ -35,6 +38,20 @@ const AdminSideNavLinks = () => {
             path: "/lgas/spos",
             compare: url.startsWith("/lgas/spos"),
             icon: <MapPin size={16} />,
+            excludes: [] as string[],
+        },
+        {
+            name: "CVR Records",
+            path: "/admin/cvrs",
+            compare: url.startsWith("/lgas/spos"),
+            icon: <IdCard size={16} />,
+            excludes: [] as string[],
+        },
+        {
+            name: "Accreditations",
+            path: "/admin/accreditations",
+            compare: url.startsWith("/lgas/spos"),
+            icon: <FingerprintIcon size={16} />,
             excludes: [] as string[],
         },
         {
@@ -191,7 +208,7 @@ const AdminSideNavLinks = () => {
                 <p className="nav-section-label">Navigation</p>
 
                 {/* Always-visible links */}
-                {links.slice(0, 3).map((link) =>
+                {links.slice(0, 5).map((link) =>
                     role && link.excludes.includes(role) ? null : (
                         <Link
                             key={link.name}
@@ -214,7 +231,7 @@ const AdminSideNavLinks = () => {
                 )}
 
                 {/* Admin-only links */}
-                {links.slice(3).map((link) =>
+                {links.slice(5).map((link) =>
                     role && link.excludes.includes(role) ? null : (
                         <Link
                             key={link.name}

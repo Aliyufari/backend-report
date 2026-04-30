@@ -17,18 +17,33 @@ class UserResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
-            // 'first_name' => $this->first_name,
-            // 'middle_name' => $this->middle_name,
-            // 'last_name' => $this->last_name,
             'email' => $this->email,
-            // 'phone' => $this->phone,
-            'role' => new RoleResource($this->whenLoaded('role')),
 
-            'created_by' => new UserResource($this->whenLoaded('created_by')),
-            'updated_by' => new UserResource($this->whenLoaded('updated_by')),
+            'role' => $this->whenLoaded('roles', function () {
+                $role = $this->roles->first();
 
+                return $role
+                    ? ['id' => $role->id, 'name' => $role->name]
+                    : null;
+            }),
+
+            'location_type' => $this->location_type?->value ?? $this->location_type,
+            'location_id' => $this->location_id,
+
+            'location' => $this->when(
+                $this->relationLoaded('location') && $this->location,
+                fn() => [
+                    'id' => $this->location->id,
+                    'name' => $this->location->name ?? null,
+                    'code' => $this->location->code ?? null,
+                ]
+            ),
+
+            'created_by' => new UserResource($this->whenLoaded('creator')),
             'created_at' => $this->created_at,
-            'updated_at' => $this->updated_at,
+
+            'updated_by' => new UserResource($this->whenLoaded('updater')),
+            'updated_at' => $this->updated_at
         ];
     }
 }

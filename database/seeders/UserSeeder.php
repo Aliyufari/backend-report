@@ -12,27 +12,29 @@ class UserSeeder extends Seeder
 {
     public function run(): void
     {
-        $role = RoleModel::where('name', RoleType::SUPER_ADMIN->value)
-            ->firstOrFail();
+        $superAdminRole = RoleModel::findByName(RoleType::SUPER_ADMIN->value);
+        $adminRole = RoleModel::findByName(RoleType::ADMIN->value);
 
-        User::firstOrCreate(
+        $user1 = User::firstOrCreate(
             ['email' => 'aliyufari@gmail.com'],
             [
                 'name' => 'AF',
                 'password' => Hash::make('Fari@3031.'),
                 'email_verified_at' => now(),
-                'role_id' => $role->id,
             ]
         );
 
-        User::firstOrCreate(
+        $user1->assignRole($superAdminRole);
+
+        $user2 = User::firstOrCreate(
             ['email' => 'aslere00005@gmail.com'],
             [
                 'name' => 'A S Lere',
                 'password' => Hash::make('Aslere00005'),
                 'email_verified_at' => now(),
-                'role_id' => $role->id,
             ]
         );
+
+        $user2->assignRole($adminRole);
     }
 }

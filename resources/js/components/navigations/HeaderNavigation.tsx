@@ -3,26 +3,22 @@ import { useEffect, useState } from "react";
 import { Link, usePage, router } from "@inertiajs/react";
 import Spinner from "@/pages/components/Spinner";
 import MobileNavigation from "@/components/navigations/MobileNavigation";
+import { useLoader } from "@/hooks/useLoader";
 
 interface AuthUser {
     id: number;
     name: string;
     email: string;
-    role: {
-        id: string;
-        name: string;
-    } | null;
+    role: { id: string; name: string } | null;
 }
 
 interface PageProps {
-    auth: {
-        user: AuthUser | null;
-    };
+    auth: { user: AuthUser | null };
     [key: string]: unknown;
 }
 
 export default function HeaderNavigation() {
-    const [showProfile, setShowProfile] = useState(false);
+    const [showProfile,   setShowProfile]   = useState(false);
     const [showMobileNav, setShowMobileNav] = useState(false);
     const { props } = usePage<PageProps>();
     const user = props.auth?.user ?? null;
@@ -42,205 +38,118 @@ export default function HeaderNavigation() {
 
     return (
         <>
-            <style>{`
-                @import url('https://fonts.bunny.net/css?family=dm-mono:400,500|syne:600,700');
-                .header-nav { font-family: 'Syne', sans-serif; }
-                .header-mono { font-family: 'DM Mono', monospace; }
-
-                .role-badge {
-                    font-family: 'DM Mono', monospace;
-                    font-size: 10px;
-                    letter-spacing: 0.05em;
-                    background: color-mix(in oklch, var(--primary) 12%, transparent);
-                    color: var(--primary);
-                    border: 1px solid color-mix(in oklch, var(--primary) 25%, transparent);
-                    padding: 1px 6px;
-                    border-radius: 4px;
-                    text-transform: capitalize;
-                }
-
-                .dark .role-badge {
-                    background: rgba(34,197,94,0.12);
-                    color: #4ade80;
-                    border-color: rgba(34,197,94,0.25);
-                }
-
-                .avatar-box {
-                    width: 32px; height: 32px;
-                    border-radius: 8px;
-                    background: color-mix(in oklch, var(--primary) 10%, transparent);
-                    border: 1px solid color-mix(in oklch, var(--primary) 25%, transparent);
-                    display: flex; align-items: center; justify-content: center;
-                    color: var(--primary);
-                    font-family: 'DM Mono', monospace;
-                    font-size: 13px;
-                    font-weight: 700;
-                    transition: all 0.2s ease;
-                }
-
-                .avatar-box.active {
-                    box-shadow: 0 0 0 2px color-mix(in oklch, var(--primary) 40%, transparent),
-                                0 0 12px color-mix(in oklch, var(--primary) 15%, transparent);
-                }
-
-                .dark .avatar-box {
-                    background: rgba(34,197,94,0.1);
-                    border-color: rgba(34,197,94,0.25);
-                    color: #4ade80;
-                }
-
-                .profile-trigger:hover {
-                    background: var(--accent);
-                }
-
-                .dark .profile-trigger:hover {
-                    background: rgba(255,255,255,0.05);
-                }
-
-                .profile-dropdown {
-                    background: var(--popover);
-                    border: 1px solid var(--border);
-                    box-shadow: 0 8px 30px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
-                }
-
-                .dark .profile-dropdown {
-                    background: #0f1117;
-                    border-color: rgba(34,197,94,0.2);
-                    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
-                }
-
-                .dropdown-header {
-                    border-bottom: 1px solid var(--border);
-                }
-
-                .dark .dropdown-header { border-color: rgba(255,255,255,0.05); }
-
-                .dropdown-item {
-                    position: relative;
-                    overflow: hidden;
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                    font-size: 13px;
-                    padding: 8px 12px;
-                    border-radius: 6px;
-                    color: var(--foreground);
-                    transition: all 0.15s ease;
-                    cursor: pointer;
-                    width: 100%;
-                }
-
-                .dropdown-item:hover {
-                    background: var(--accent);
-                    padding-left: 16px;
-                }
-
-                .dark .dropdown-item { color: #d4d4d8; }
-                .dark .dropdown-item:hover { background: rgba(34,197,94,0.06); }
-
-                .dropdown-item::before {
-                    content: '';
-                    position: absolute;
-                    left: 0; top: 15%; bottom: 15%;
-                    width: 2px;
-                    background: var(--primary);
-                    border-radius: 0 2px 2px 0;
-                    transform: scaleY(0);
-                    transition: transform 0.15s ease;
-                }
-                .dropdown-item:hover::before { transform: scaleY(1); }
-
-                .dropdown-divider { border-top: 1px solid var(--border); }
-                .dark .dropdown-divider { border-color: rgba(255,255,255,0.05); }
-
-                .logout-btn {
-                    display: flex; align-items: center; gap: 10px;
-                    font-size: 13px; padding: 8px 12px; border-radius: 6px;
-                    color: var(--destructive);
-                    transition: all 0.15s ease;
-                    cursor: pointer; width: 100%;
-                }
-                .logout-btn:hover { background: color-mix(in oklch, var(--destructive) 10%, transparent); }
-
-                @keyframes pulse-primary {
-                    0%, 100% { opacity: 1; }
-                    50% { opacity: 0.35; }
-                }
-                .status-dot { animation: pulse-primary 2.5s ease-in-out infinite; }
-            `}</style>
-
             <MobileNavigation
                 showMobile={showMobileNav}
                 onClose={() => setShowMobileNav(false)}
             />
 
-            <div className="header-nav flex items-center gap-3">
+            <div className="font-['Syne',sans-serif] flex items-center gap-3">
+
                 {/* Live indicator */}
-                <div className="hidden md:flex items-center gap-1.5 header-mono text-xs" style={{ color: 'var(--muted-foreground)' }}>
-                    <span className="status-dot w-1.5 h-1.5 rounded-full inline-block" style={{ background: 'var(--primary)' }} />
+                <div className="hidden md:flex items-center gap-1.5 font-['DM_Mono',monospace] text-xs text-muted-foreground">
+                    <span className="animate-pulse-primary w-1.5 h-1.5 rounded-full inline-block bg-primary" />
                     <span>LIVE</span>
                 </div>
 
-                <div className="w-px h-5 hidden md:block" style={{ background: 'var(--border)' }} />
+                <div className="w-px h-5 hidden md:block bg-border" />
 
                 {/* Profile */}
                 <div className="relative">
                     <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); setShowProfile((v) => !v); }}
-                        className="profile-trigger flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg transition-all duration-200"
+                        className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg transition-all duration-200
+                            hover:bg-accent"
                     >
-                        <div className={`avatar-box ${showProfile ? "active" : ""}`}>
-                            {!user ? (
-                                <Spinner size={14} color="var(--primary)" />
-                            ) : (
-                                user.name?.charAt(0).toUpperCase()
-                            )}
+                        {/* Avatar */}
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center
+                            font-['DM_Mono',monospace] text-[13px] font-bold text-primary
+                            bg-[color-mix(in_oklch,var(--primary)_10%,transparent)]
+                            border border-[color-mix(in_oklch,var(--primary)_25%,transparent)]
+                            transition-all duration-200
+                            ${showProfile
+                                ? "shadow-[0_0_0_2px_color-mix(in_oklch,var(--primary)_40%,transparent),0_0_12px_color-mix(in_oklch,var(--primary)_15%,transparent)]"
+                                : ""
+                            }`}
+                        >
+                            {!user
+                                ? <Spinner size={14} color="var(--primary)" />
+                                : user.name?.charAt(0).toUpperCase()
+                            }
                         </div>
 
-                        {user?.id ? (
+                        {/* Name + role */}
+                        {user?.id && (
                             <div className="hidden md:flex flex-col items-start gap-0.5">
-                                <span className="text-xs font-semibold leading-none capitalize" style={{ color: 'var(--foreground)' }}>
+                                <span className="text-xs font-semibold leading-none capitalize text-foreground">
                                     {user.name}
                                 </span>
-                                {roleLabel && <span className="role-badge">{roleLabel}</span>}
+                                {roleLabel && (
+                                    <span className="font-['DM_Mono',monospace] text-[10px] tracking-[0.05em] capitalize
+                                        text-primary px-1.5 py-px rounded
+                                        bg-[color-mix(in_oklch,var(--primary)_12%,transparent)]
+                                        border border-[color-mix(in_oklch,var(--primary)_25%,transparent)]">
+                                        {roleLabel}
+                                    </span>
+                                )}
                             </div>
-                        ) : null}
+                        )}
 
                         <ChevronDown
                             size={13}
-                            className={`transition-transform duration-200 ${showProfile ? "rotate-180" : ""}`}
-                            style={{ color: 'var(--muted-foreground)' }}
+                            className={`text-muted-foreground transition-transform duration-200 ${showProfile ? "rotate-180" : ""}`}
                         />
                     </button>
 
+                    {/* Dropdown */}
                     {showProfile && (
                         <div
                             onClick={(e) => e.stopPropagation()}
-                            className="profile-dropdown absolute top-12 right-0 w-56 rounded-xl overflow-hidden z-50"
+                            className="absolute top-12 right-0 w-56 rounded-xl overflow-hidden z-50
+                                bg-popover dark:bg-[#0f1117]
+                                border border-border dark:border-[color-mix(in_oklch,var(--primary)_20%,transparent)]
+                                shadow-[0_8px_30px_rgba(0,0,0,0.12),0_2px_8px_rgba(0,0,0,0.06)]
+                                dark:shadow-[0_20px_40px_rgba(0,0,0,0.5)]"
                         >
                             {/* User info */}
-                            <div className="dropdown-header px-4 py-3">
-                                <p className="text-sm font-semibold capitalize" style={{ color: 'var(--foreground)' }}>{user?.name}</p>
-                                <p className="header-mono text-xs mt-0.5 truncate" style={{ color: 'var(--muted-foreground)' }}>{user?.email}</p>
+                            <div className="px-4 py-3 border-b border-border">
+                                <p className="text-sm font-semibold capitalize text-foreground">{user?.name}</p>
+                                <p className="font-['DM_Mono',monospace] text-xs mt-0.5 truncate text-muted-foreground">
+                                    {user?.email}
+                                </p>
                             </div>
 
                             {/* Links */}
                             <div className="p-2 space-y-0.5">
-                                <Link href="/admin/profile" className="dropdown-item">
-                                    <User size={14} style={{ color: 'var(--muted-foreground)', flexShrink: 0 }} />
+                                <Link
+                                    href="/admin/profile"
+                                    className="dropdown-item relative overflow-hidden flex items-center gap-2.5
+                                        text-[13px] px-3 py-2 rounded-md text-foreground
+                                        transition-all duration-150 hover:bg-accent hover:pl-4"
+                                >
+                                    <User size={14} className="text-muted-foreground shrink-0" />
                                     <span>My Profile</span>
                                 </Link>
-                                <Link href="/dashboard/settings" className="dropdown-item">
-                                    <Settings size={14} style={{ color: 'var(--muted-foreground)', flexShrink: 0 }} />
+                                <Link
+                                    href="/dashboard/settings"
+                                    className="dropdown-item relative overflow-hidden flex items-center gap-2.5
+                                        text-[13px] px-3 py-2 rounded-md text-foreground
+                                        transition-all duration-150 hover:bg-accent hover:pl-4"
+                                >
+                                    <Settings size={14} className="text-muted-foreground shrink-0" />
                                     <span>Settings</span>
                                 </Link>
                             </div>
 
                             {/* Logout */}
-                            <div className="p-2 dropdown-divider">
-                                <button onClick={handleLogout} className="logout-btn">
-                                    <LogOut size={14} style={{ flexShrink: 0 }} />
+                            <div className="p-2 border-t border-border">
+                                <button
+                                    onClick={handleLogout}
+                                    className="flex items-center gap-2.5 text-[13px] px-3 py-2 rounded-md w-full
+                                        text-destructive transition-all duration-150
+                                        hover:bg-[color-mix(in_oklch,var(--destructive)_10%,transparent)]"
+                                >
+                                    <LogOut size={14} className="shrink-0" />
                                     <span>Sign Out</span>
                                 </button>
                             </div>
@@ -252,8 +161,8 @@ export default function HeaderNavigation() {
                 <button
                     type="button"
                     onClick={() => setShowMobileNav(true)}
-                    className="inline-flex md:hidden items-center justify-center w-8 h-8 rounded-lg transition-all"
-                    style={{ color: 'var(--muted-foreground)' }}
+                    className="inline-flex md:hidden items-center justify-center w-8 h-8 rounded-lg
+                        text-muted-foreground transition-all hover:bg-accent"
                 >
                     <AlignJustify size={18} />
                 </button>

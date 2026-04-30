@@ -21,8 +21,8 @@ export default function DeleteUserModal({ open, onClose, user }: Props) {
     const handleDelete = () => {
         if (!user) return;
         destroy(users.destroy(user.id).url, {
-            onSuccess: () => { toast.success("User deleted successfully."); onClose(); },
-            onError:   () => toast.error("Failed to delete user."),
+            onSuccess: () => onClose(),
+            onError:   () => {},
         });
     };
 
@@ -31,52 +31,38 @@ export default function DeleteUserModal({ open, onClose, user }: Props) {
     return (
         <Portal>
             <div
-                style={{
-                    position: "fixed", inset: 0, zIndex: 110,
-                    background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    padding: 16, animation: "fadeIn 0.15s ease",
-                }}
+                className="animate-fade-in fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
                 onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
             >
-                <div style={{
-                    background: "var(--card)", borderRadius: 14, width: "100%", maxWidth: 400,
-                    padding: 28, boxShadow: "0 20px 50px rgba(0,0,0,0.2)",
-                    animation: "slideUp 0.2s ease", border: "1px solid var(--border)",
-                }}>
-                    <div style={{
-                        width: 44, height: 44, borderRadius: "50%",
-                        background: "color-mix(in oklch, var(--destructive) 12%, transparent)",
-                        display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16,
-                    }}>
-                        <Trash2 size={20} style={{ color: "var(--destructive)" }} />
+                <div className="animate-slide-up bg-card border border-border rounded-[14px] w-full max-w-md p-7 shadow-[0_20px_50px_rgba(0,0,0,0.2)]">
+
+                    <div className="w-11 h-11 rounded-full bg-destructive/12 flex items-center justify-center mb-4 mx-auto">
+                        <Trash2 size={20} className="text-destructive flex-shrink-0" strokeWidth={2} />
                     </div>
 
-                    <p style={{ fontFamily: "'Syne', sans-serif", fontSize: 16, fontWeight: 700, color: "var(--foreground)", marginBottom: 8 }}>
+                    <p className="font-['Syne',sans-serif] text-base font-bold text-foreground mb-2 text-center">
                         Delete User
                     </p>
-                    <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: "var(--muted-foreground)", lineHeight: 1.6 }}>
-                        Are you sure you want to delete <strong style={{ color: "var(--foreground)" }}>{user.name}</strong>?
+
+                    <p className="font-['DM_Mono',monospace] text-xs text-muted-foreground leading-relaxed text-center max-w-xs mx-auto">
+                        Are you sure you want to delete{" "}
+                        <strong className="text-foreground">{user.name}</strong>?
                         This action cannot be undone.
                     </p>
 
-                    <div style={{ display: "flex", gap: 10, marginTop: 24, justifyContent: "flex-end" }}>
-                        <button onClick={onClose} style={{
-                            padding: "8px 18px", borderRadius: 8, fontSize: 13,
-                            fontFamily: "'Syne', sans-serif", fontWeight: 600,
-                            border: "1px solid var(--border)", background: "transparent",
-                            color: "var(--foreground)", cursor: "pointer",
-                        }}>
+                    <div className="flex items-center justify-center gap-2.5 mt-6">
+                        <button
+                            onClick={onClose}
+                            className="px-[18px] py-2 rounded-lg text-[13px] font-['Syne',sans-serif] font-semibold border border-border bg-transparent text-foreground cursor-pointer"
+                        >
                             Cancel
                         </button>
-                        <button onClick={handleDelete} disabled={processing} style={{
-                            padding: "8px 18px", borderRadius: 8, fontSize: 13,
-                            fontFamily: "'Syne', sans-serif", fontWeight: 600,
-                            background: "var(--destructive)", color: "white",
-                            border: "none", cursor: "pointer",
-                            display: "flex", alignItems: "center", gap: 6,
-                            opacity: processing ? 0.6 : 1,
-                        }}>
+
+                        <button
+                            onClick={handleDelete}
+                            disabled={processing}
+                            className="flex items-center justify-center gap-1.5 px-[18px] py-2 rounded-lg text-[13px] font-['Syne',sans-serif] font-semibold bg-destructive text-white border-none cursor-pointer disabled:opacity-60"
+                        >
                             {processing && <Loader2 size={13} className="animate-spin" />}
                             Delete
                         </button>

@@ -1,6 +1,5 @@
 import { useEffect, type JSX } from "react";
 import AdminSidebar from "../sidebar/AdminSidebar";
-// import AdminSideNavLinks from "../applicant/ApplicantSideNavLinks";
 import useRole from "@/hooks/auth/useRole";
 import type { Roles } from "@/types";
 

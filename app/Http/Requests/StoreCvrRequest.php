@@ -2,7 +2,10 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\CvrStatus;
+use App\Enums\CvrType;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rules\Enum;
 
 class StoreCvrRequest extends FormRequest
 {
@@ -11,7 +14,7 @@ class StoreCvrRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -22,7 +25,10 @@ class StoreCvrRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'unique_id' => ['required', 'uuid', 'unique:cvrs,unique_id'],
+            'type'      => ['required', new Enum(CvrType::class)],
+            'status'    => ['required', new Enum(CvrStatus::class)],
+            'pu_id'     => ['required', 'uuid', 'exists:pus,id'],
         ];
     }
 }

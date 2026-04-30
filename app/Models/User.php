@@ -5,14 +5,16 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 
 use App\Enums\Location;
+use App\Enums\Role as RoleEnum;
 use App\Traits\HasAudit;
-use App\Traits\HasRoles;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Foundation\Auth\User as Authenticatable;
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
@@ -29,10 +31,12 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'role_id',
         'location_id',
         'location_type',
     ];
+
+    protected $keyType = 'string';
+    public $incrementing = false;
 
     /**
      * The attributes that should be hidden for serialization.
@@ -58,93 +62,180 @@ class User extends Authenticatable
         ];
     }
 
-    public function role(): BelongsTo
+    public const ROLE_CREATION_MAP = [
+        RoleEnum::STATE_COORDINATOR->value => [
+            RoleEnum::ZONAL_COORDINATOR->value,
+            RoleEnum::LGA_COORDINATOR->value,
+            RoleEnum::WARD_COORDINATOR->value,
+        ],
+        RoleEnum::ZONAL_COORDINATOR->value => [
+            RoleEnum::LGA_COORDINATOR->value,
+            RoleEnum::WARD_COORDINATOR->value,
+        ],
+        RoleEnum::LGA_COORDINATOR->value => [
+            RoleEnum::WARD_COORDINATOR->value,
+        ]
+    ];
+
+    public function location(): MorphTo
     {
-        return $this->belongsTo(
-            Role::class
-        );
+        return $this->morphTo();
     }
 
-    public function location()
+    public function canCreateRole(?string $role): bool
     {
-        return match ($this->location_type) {
-            Location::STATE => $this->belongsTo(State::class, 'location_id'),
-            Location::ZONE => $this->belongsTo(Zone::class, 'location_id'),
-            Location::LGA => $this->belongsTo(Lga::class, 'location_id'),
-            Location::WARD => $this->belongsTo(Ward::class, 'location_id'),
-            Location::PU => $this->belongsTo(Pu::class, 'location_id'),
-            default => null,
-        };
-    }
+        if (!$role) {
+            return false;
+        }
 
-    public function canAccessUser(User $target): bool
-    {
-        if ($this->isSuperAdmin() || $this->isAdmin() || $this->isGovernor()) {
+        if ($this->hasAnyRole([RoleEnum::SUPER_ADMIN->value, RoleEnum::ADMIN->value])) {
             return true;
         }
 
-        if ($this->location_type === Location::STATE) {
-            return $target->location()
-                ->whereHas(
-                    'state',
-                    fn($q) =>
-                    $q->where('id', $this->location_id)
-                )->exists();
-        }
+        $creatorRoles = $this->getRoleNames()->toArray();
 
-        if ($this->location_type === Location::ZONE) {
-            return $target->location()
-                ->whereHas(
-                    'zone',
-                    fn($q) =>
-                    $q->where('id', $this->location_id)
-                )->exists();
-        }
+        foreach ($creatorRoles as $creatorRole) {
+            $allowed = self::ROLE_CREATION_MAP[$creatorRole] ?? [];
 
-        if ($this->location_type === Location::LGA) {
-            return $target->location()
-                ->whereHas(
-                    'lga',
-                    fn($q) =>
-                    $q->where('id', $this->location_id)
-                )->exists();
-        }
-
-        if ($this->location_type === Location::WARD) {
-            return $target->location()
-                ->where('ward_id', $this->location_id)
-                ->exists();
+            if (in_array($role, $allowed, true)) {
+                return true;
+            }
         }
 
         return false;
     }
 
-    public function scopeVisibleTo($query, User $authUser)
+    private function isWithinHierarchy(User $target): bool
     {
-        if ($authUser->isSuperAdmin() || $authUser->isAdmin() || $authUser->isGovernor()) {
+        if ($this->hasAnyRole([RoleEnum::SUPER_ADMIN->value, RoleEnum::ADMIN->value, RoleEnum::GOVERNOR->value])) {
+            return true;
+        }
+
+        if (!$this->location || !$target->location) {
+            return false;
+        }
+
+        return match ($this->location_type) {
+
+            'state' =>
+            optional($target->location->state)->id === $this->location_id,
+
+            'zone' =>
+            optional($target->location->zone)->id === $this->location_id,
+
+            'lga' =>
+            optional($target->location->lga)->id === $this->location_id,
+
+            'ward' =>
+            optional($target->location->ward)->id === $this->location_id,
+
+            'pu' =>
+            $target->location_id === $this->location_id,
+
+            default => false,
+        };
+    }
+
+    public function canAccessUser(User $target): bool
+    {
+        return $this->isWithinHierarchy($target);
+    }
+
+    public function canManageUser(User $target, string $action): bool
+    {
+        if ($this->hasAnyRole([RoleEnum::SUPER_ADMIN->value, RoleEnum::ADMIN->value])) {
+            return true;
+        }
+
+        return match ($action) {
+
+            'create' => $this->canCreateRole($target->getRoleNames()->first())
+                && $this->isWithinHierarchy($target),
+
+            'update' => $this->isWithinHierarchy($target),
+
+            'delete' => $this->isWithinHierarchy($target),
+
+            default => false,
+        };
+    }
+
+    /**
+     * Scope visibility by hierarchy + role restrictions
+     */
+    public function scopeVisibleTo(Builder $query, User $authUser): Builder
+    {
+        /**
+         * Always exclude self
+         */
+        $query->whereKeyNot($authUser->id);
+
+        /**
+         * SUPER ADMIN → see all except self
+         */
+        if ($authUser->hasRole(RoleEnum::SUPER_ADMIN->value)) {
             return $query;
         }
 
-        return $query->whereHasMorph(
-            'location',
-            ['*'],
-            function ($q) use ($authUser) {
+        /**
+         * Nobody except super_admin sees super_admin
+         */
+        $query->whereDoesntHave('roles', function ($roleQuery) {
+            $roleQuery->where('name', RoleEnum::SUPER_ADMIN->value);
+        });
 
-                match ($authUser->location_type) {
+        /**
+         * ADMIN cannot see ADMIN users
+         */
+        if ($authUser->hasRole(RoleEnum::ADMIN->value)) {
+            return $query->whereDoesntHave('roles', function ($roleQuery) {
+                $roleQuery->where('name', RoleEnum::ADMIN->value);
+            });
+        }
 
-                    Location::STATE =>
-                    $q->where('state_id', $authUser->location_id),
+        /**
+         * GOVERNOR → can see everyone below except admin/super_admin
+         */
+        if ($authUser->hasRole(RoleEnum::GOVERNOR->value)) {
+            return $query;
+        }
 
-                    Location::ZONE =>
-                    $q->where('zone_id', $authUser->location_id),
+        /**
+         * Hierarchical location filtering
+         */
+        return $query->whereHas('location', function ($locationQuery) use ($authUser) {
 
-                    Location::LGA =>
-                    $q->where('lga_id', $authUser->location_id),
+            match ($authUser->location_type?->value) {
 
-                    Location::WARD =>
-                    $q->where('ward_id', $authUser->location_id),
-                };
-            }
-        );
+                Location::STATE->value =>
+                $locationQuery->whereHas(
+                    'state',
+                    fn($q) => $q->whereKey($authUser->location_id)
+                ),
+
+                Location::ZONE->value =>
+                $locationQuery->whereHas(
+                    'zone',
+                    fn($q) => $q->whereKey($authUser->location_id)
+                ),
+
+                Location::LGA->value =>
+                $locationQuery->whereHas(
+                    'lga',
+                    fn($q) => $q->whereKey($authUser->location_id)
+                ),
+
+                Location::WARD->value =>
+                $locationQuery->whereHas(
+                    'ward',
+                    fn($q) => $q->whereKey($authUser->location_id)
+                ),
+
+                Location::PU->value =>
+                $locationQuery->whereKey($authUser->location_id),
+
+                default => null,
+            };
+        });
     }
 }

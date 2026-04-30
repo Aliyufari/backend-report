@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { usePage } from "@inertiajs/react";
 import { toast } from "react-toastify";
-import { Upload, FileSpreadsheet, X, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { Upload, FileSpreadsheet, X, CheckCircle2, AlertCircle, Loader } from "lucide-react";
 import { echo } from "@/echo";
 import upload from "@/routes/upload";
 
-type UploadStatus = "idle" | "pending" | "processing" | "done" | "failed";
+type UploadStatus = "pending" | "processing" | "done" | "failed";
 
 interface UploadProgress {
     upload_id: string;
-    status: UploadStatus;
+    status: UploadStatus | string | null;
     percent: number;
     message: string;
     updated_at: string;
@@ -21,47 +21,83 @@ interface PageProps {
     [key: string]: unknown;
 }
 
-function ProgressBar({ progress }: { progress: UploadProgress }) {
-    const statusConfig: Record<UploadStatus, { color: string; bg: string; icon: React.ReactNode }> = {
-        idle:       { color: "bg-zinc-400",    bg: "bg-zinc-50",    icon: null },
-        pending:    { color: "bg-amber-400",   bg: "bg-amber-50",   icon: <Loader2 size={16} className="animate-spin text-amber-500" /> },
-        processing: { color: "bg-blue-500",    bg: "bg-blue-50",    icon: <Loader2 size={16} className="animate-spin text-blue-500" /> },
-        done:       { color: "bg-emerald-500", bg: "bg-emerald-50", icon: <CheckCircle2 size={16} className="text-emerald-500" /> },
-        failed:     { color: "bg-red-500",     bg: "bg-red-50",     icon: <AlertCircle size={16} className="text-red-500" /> },
-    };
+// ── Column metadata ───────────────────────────────────────────────────────────
 
-    const cfg = statusConfig[progress.status];
+const COLUMNS: [string, string][] = [
+    ["state", "State name"],
+    ["zone",  "Senatorial zone"],
+    ["lga",   "Local Government Area"],
+    ["ra",    "Registration Area (Ward)"],
+    ["pu",    "Polling Unit name"],
+    ["delim", "Polling Unit number"],
+];
+
+// ── ProgressBar ───────────────────────────────────────────────────────────────
+
+const STATUS_CONFIG = {
+    pending: {
+        bar:       "bg-amber-400",
+        bg:        "bg-amber-50",
+        icon:      <Loader size={16} className="animate-spin text-amber-500" />,
+        label:     "Queued",
+    },
+    processing: {
+        bar:       "bg-blue-500",
+        bg:        "bg-blue-50",
+        icon:      <Loader size={16} className="animate-spin text-blue-500" />,
+        label:     "Importing...",
+    },
+    done: {
+        bar:       "bg-emerald-500",
+        bg:        "bg-emerald-50",
+        icon:      <CheckCircle2 size={16} className="text-emerald-500" />,
+        label:     "Import Complete",
+    },
+    failed: {
+        bar:       "bg-red-500",
+        bg:        "bg-red-50",
+        icon:      <AlertCircle size={16} className="text-red-500" />,
+        label:     "Import Failed",
+    },
+} satisfies Record<UploadStatus, { bar: string; bg: string; icon: React.ReactNode; label: string }>;
+
+function ProgressBar({ progress }: { progress: UploadProgress }) {
+    const safeStatus: UploadStatus =
+        progress?.status && progress.status in STATUS_CONFIG
+            ? (progress.status as UploadStatus)
+            : "pending";
+
+    const cfg        = STATUS_CONFIG[safeStatus];
+    const safePercent = Math.max(0, Math.min(100, progress.percent ?? 0));
+    const isFinished  = safeStatus === "done" || safeStatus === "failed";
 
     return (
-        <div className={`w-full rounded-xl border p-4 space-y-3 ${cfg.bg}`} style={{ borderColor: "var(--border)" }}>
+        <div className={`w-full rounded-xl border border-border p-4 space-y-3 ${cfg.bg}`}>
             <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                     {cfg.icon}
-                    <span className="text-sm font-medium" style={{ fontFamily: "'Syne', sans-serif" }}>
-                        {progress.status === "done"       ? "Import Complete"  :
-                         progress.status === "failed"     ? "Import Failed"    :
-                         progress.status === "processing" ? "Importing..."     : "Queued"}
+                    <span className="text-sm font-medium font-['Syne',sans-serif]">
+                        {cfg.label}
                     </span>
                 </div>
-                <span className="text-xs tabular-nums font-semibold"
-                    style={{ fontFamily: "'DM Mono', monospace", color: "var(--muted-foreground)" }}>
-                    {progress.percent}%
+                <span className="text-xs tabular-nums font-semibold font-['DM_Mono',monospace] text-muted-foreground">
+                    {safePercent}%
                 </span>
             </div>
 
-            <div className="w-full h-2 bg-white/60 rounded-full overflow-hidden border" style={{ borderColor: "var(--border)" }}>
+            <div className="w-full h-2 bg-white/60 rounded-full overflow-hidden border border-border">
                 <div
-                    className={`h-full rounded-full transition-all duration-500 ${cfg.color}`}
-                    style={{ width: `${progress.percent}%` }}
+                    className={`h-full rounded-full transition-all duration-500 ${cfg.bar}`}
+                    style={{ width: `${safePercent}%` }}
                 />
             </div>
 
-            <p className="text-xs" style={{ fontFamily: "'DM Mono', monospace", color: "var(--muted-foreground)" }}>
-                {progress.message}
+            <p className="text-xs font-['DM_Mono',monospace] text-muted-foreground">
+                {progress.message || "Preparing upload..."}
             </p>
 
-            {(progress.status === "done" || progress.status === "failed") && (
-                <p className="text-[10px]" style={{ fontFamily: "'DM Mono', monospace", color: "var(--muted-foreground)" }}>
+            {isFinished && progress.updated_at && (
+                <p className="text-[10px] font-['DM_Mono',monospace] text-muted-foreground">
                     Last updated: {new Date(progress.updated_at).toLocaleString()}
                 </p>
             )}
@@ -69,56 +105,75 @@ function ProgressBar({ progress }: { progress: UploadProgress }) {
     );
 }
 
-export default function UploadPage() {
-    const { props } = usePage<PageProps>();
-    const userId = props.auth.user.id;
+// ── UploadPage ────────────────────────────────────────────────────────────────
 
-    const [file, setFile] = useState<File | null>(null);
-    const [dragOver, setDragOver] = useState(false);
+export default function UploadPage() {
+    const { props }  = usePage<PageProps>();
+    const userId     = props.auth.user.id;
+
+    const [file,      setFile]      = useState<File | null>(null);
+    const [dragOver,  setDragOver]  = useState(false);
     const [uploading, setUploading] = useState(false);
-    const [progress, setProgress] = useState<UploadProgress | null>(props.existingProgress ?? null);
+    const [progress,  setProgress]  = useState<UploadProgress | null>(props.existingProgress ?? null);
+
     const inputRef = useRef<HTMLInputElement>(null);
-    const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const pollRef  = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    // ── WebSocket ─────────────────────────────────────────────────────────────
 
     useEffect(() => {
         echo
             .private(`upload.${userId}`)
             .listen(".progress.updated", (data: UploadProgress) => {
-                setProgress(data);
-                if (pollRef.current) {
-                    clearInterval(pollRef.current);
-                    pollRef.current = null;
+                setProgress(prev =>
+                    !prev || new Date(data.updated_at) > new Date(prev.updated_at) ? data : prev
+                );
+
+                if (data.status === "done" || data.status === "failed") {
+                    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
                 }
             });
-        return () => { echo.leave(`upload.${userId}`); };
+
+        return () => {
+            echo.leave(`upload.${userId}`);
+            if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+        };
     }, [userId]);
+
+    // ── Polling ───────────────────────────────────────────────────────────────
 
     const startPolling = (uploadId: string) => {
         if (pollRef.current) clearInterval(pollRef.current);
+
         pollRef.current = setInterval(async () => {
             try {
-                const res = await fetch(upload.progress(uploadId).url, {
-                    headers: { "X-Requested-With": "XMLHttpRequest" },
-                });
+                const res  = await fetch(upload.progress(uploadId).url, { headers: { "X-Requested-With": "XMLHttpRequest" } });
                 const data: UploadProgress = await res.json();
-                setProgress(data);
+
+                setProgress(prev =>
+                    !prev || new Date(data.updated_at) > new Date(prev.updated_at) ? data : prev
+                );
+
                 if (data.status === "done" || data.status === "failed") {
                     clearInterval(pollRef.current!);
                     pollRef.current = null;
                 }
             } catch {
-                clearInterval(pollRef.current!);
-                pollRef.current = null;
+                if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
             }
         }, 3000);
     };
 
     useEffect(() => {
-        if (progress?.status === "pending" || progress?.status === "processing") {
+        if (progress?.upload_id && (progress.status === "pending" || progress.status === "processing")) {
             startPolling(progress.upload_id);
         }
-        return () => { if (pollRef.current) clearInterval(pollRef.current); };
-    }, []);
+        return () => {
+            if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+        };
+    }, [progress?.upload_id, progress?.status]);
+
+    // ── Handlers ──────────────────────────────────────────────────────────────
 
     const handleFile = (f: File) => {
         if (!f.name.match(/\.(xlsx|xls|csv)$/i)) {
@@ -138,34 +193,24 @@ export default function UploadPage() {
     const handleSubmit = async () => {
         if (!file) return;
         setUploading(true);
+
         const formData = new FormData();
         formData.append("file", file);
-        formData.append(
-            "_token",
-            (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ?? ""
-        );
+
         try {
-            const res = await fetch(upload.store().url, {
-                method: "POST",
-                headers: { "X-Requested-With": "XMLHttpRequest" },
-                body: formData,
-            });
-            const data = await res.json();
+            const { default: axios } = await import("axios");
+            const res  = await axios.post(upload.store().url, formData, { headers: { "Content-Type": "multipart/form-data" } });
+            const data = res.data;
+
             if (data.upload_id) {
-                setProgress({
-                    upload_id: data.upload_id,
-                    status: "pending",
-                    percent: 0,
-                    message: "Queued for processing...",
-                    updated_at: new Date().toISOString(),
-                });
+                setProgress({ upload_id: data.upload_id, status: "pending", percent: 0, message: "Queued for processing...", updated_at: new Date().toISOString() });
                 setFile(null);
                 startPolling(data.upload_id);
             } else {
                 toast.error(data.message ?? "Upload failed.");
             }
-        } catch {
-            toast.error("An error occurred. Please try again.");
+        } catch (err: any) {
+            toast.error(err?.response?.data?.message ?? "An error occurred. Please try again.");
         } finally {
             setUploading(false);
         }
@@ -173,150 +218,131 @@ export default function UploadPage() {
 
     const isActive = progress?.status === "pending" || progress?.status === "processing";
 
+    // ── Render ────────────────────────────────────────────────────────────────
+
     return (
-        <>
-            <style>{`
-                @import url('https://fonts.bunny.net/css?family=dm-mono:400,500|syne:600,700');
-                .upload-zone {
-                    border: 2px dashed var(--border);
-                    transition: all 0.2s ease;
-                }
-                .upload-zone.drag-over {
-                    border-color: var(--primary);
-                    background: color-mix(in oklch, var(--primary) 5%, transparent);
-                }
-                .upload-zone:hover {
-                    border-color: color-mix(in oklch, var(--primary) 50%, transparent);
-                }
-            `}</style>
+        <div className="space-y-6">
+            {progress && <ProgressBar progress={progress} />}
 
-            <div className="space-y-6">
-
-                {progress && <ProgressBar progress={progress} />}
-
+            {!isActive && (
                 <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
 
-                    {/* Upload form */}
-                    {!isActive && (
-                        <div className="bg-card border rounded-2xl p-6 shadow-sm space-y-5" style={{ borderColor: "var(--border)" }}>
-                            <div>
-                                <h2 className="font-bold text-base" style={{ fontFamily: "'Syne', sans-serif" }}>
-                                    Select File
-                                </h2>
-                                <p className="text-xs mt-0.5" style={{ fontFamily: "'DM Mono', monospace", color: "var(--muted-foreground)" }}>
-                                    Accepts .xlsx, .xls, .csv — max 50MB
+                    {/* ── Upload card ───────────────────────────────────── */}
+                    <div className="bg-card border border-border rounded-2xl p-6 shadow-sm space-y-5">
+                        <div>
+                            <h2 className="font-bold text-base font-['Syne',sans-serif]">Select File</h2>
+                            <p className="text-xs mt-0.5 font-['DM_Mono',monospace] text-muted-foreground">
+                                Accepts .xlsx, .xls, .csv — max 50MB
+                            </p>
+                        </div>
+
+                        {/* Drop zone */}
+                        <div
+                            onClick={() => inputRef.current?.click()}
+                            onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+                            onDragLeave={() => setDragOver(false)}
+                            onDrop={handleDrop}
+                            className={`rounded-xl p-10 flex flex-col items-center justify-center gap-3 cursor-pointer
+                                border-2 border-dashed transition-all duration-200
+                                ${dragOver
+                                    ? "border-primary bg-[color-mix(in_oklch,var(--primary)_5%,transparent)]"
+                                    : "border-border hover:border-[color-mix(in_oklch,var(--primary)_50%,transparent)]"
+                                }`}
+                        >
+                            <div className="w-14 h-14 rounded-full flex items-center justify-center bg-[color-mix(in_oklch,var(--primary)_10%,transparent)]">
+                                <Upload size={24} className="text-primary" />
+                            </div>
+
+                            <div className="text-center">
+                                <p className="text-sm font-semibold font-['Syne',sans-serif]">
+                                    Drop file here or <span className="text-primary">browse</span>
+                                </p>
+                                <p className="text-xs mt-1 font-['DM_Mono',monospace] text-muted-foreground">
+                                    XLSX · XLS · CSV
                                 </p>
                             </div>
 
-                            <div
-                                className={`upload-zone rounded-xl p-10 flex flex-col items-center justify-center gap-3 cursor-pointer ${dragOver ? "drag-over" : ""}`}
-                                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                                onDragLeave={() => setDragOver(false)}
-                                onDrop={handleDrop}
-                                onClick={() => inputRef.current?.click()}
-                            >
-                                <div className="w-14 h-14 rounded-full flex items-center justify-center"
-                                    style={{ background: "color-mix(in oklch, var(--primary) 10%, transparent)" }}>
-                                    <Upload size={24} style={{ color: "var(--primary)" }} />
-                                </div>
-                                <div className="text-center">
-                                    <p className="text-sm font-semibold" style={{ fontFamily: "'Syne', sans-serif" }}>
-                                        Drop file here or <span style={{ color: "var(--primary)" }}>browse</span>
-                                    </p>
-                                    <p className="text-xs mt-1" style={{ fontFamily: "'DM Mono', monospace", color: "var(--muted-foreground)" }}>
-                                        XLSX · XLS · CSV
-                                    </p>
-                                </div>
-                                <input
-                                    ref={inputRef}
-                                    type="file"
-                                    accept=".xlsx,.xls,.csv"
-                                    className="hidden"
-                                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
-                                />
-                            </div>
-
-                            {file && (
-                                <div className="flex items-center gap-3 px-4 py-3 rounded-lg border"
-                                    style={{
-                                        background: "color-mix(in oklch, var(--primary) 6%, transparent)",
-                                        borderColor: "color-mix(in oklch, var(--primary) 25%, transparent)"
-                                    }}>
-                                    <FileSpreadsheet size={18} style={{ color: "var(--primary)", flexShrink: 0 }} />
-                                    <span className="text-sm font-medium flex-1 truncate" style={{ fontFamily: "'DM Mono', monospace" }}>
-                                        {file.name}
-                                    </span>
-                                    <span className="text-xs flex-shrink-0"
-                                        style={{ fontFamily: "'DM Mono', monospace", color: "var(--muted-foreground)" }}>
-                                        {(file.size / 1024 / 1024).toFixed(2)} MB
-                                    </span>
-                                    <button onClick={() => setFile(null)} className="text-zinc-400 hover:text-red-500 transition-colors flex-shrink-0">
-                                        <X size={16} />
-                                    </button>
-                                </div>
-                            )}
-
-                            <button
-                                onClick={handleSubmit}
-                                disabled={!file || uploading}
-                                className="w-full flex items-center justify-center gap-2 py-2.5 px-6 rounded-lg font-semibold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                style={{ fontFamily: "'Syne', sans-serif", background: "var(--primary)", color: "var(--primary-foreground)" }}
-                            >
-                                {uploading
-                                    ? <><Loader2 size={16} className="animate-spin" /> Uploading...</>
-                                    : <><Upload size={16} /> Upload & Import</>
-                                }
-                            </button>
+                            <input
+                                ref={inputRef}
+                                type="file"
+                                accept=".xlsx,.xls,.csv"
+                                className="hidden"
+                                onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
+                            />
                         </div>
-                    )}
 
-                    {/* Column guide — sits to the right on large screens, below on mobile */}
-                    <div className="bg-card border rounded-2xl p-5 shadow-sm" style={{ borderColor: "var(--border)" }}>
-                        <p className="text-xs font-semibold uppercase tracking-wide mb-3"
-                            style={{ fontFamily: "'DM Mono', monospace", color: "var(--muted-foreground)" }}>
+                        {/* Selected file */}
+                        {file && (
+                            <div className="flex items-center gap-3 px-4 py-3 rounded-lg
+                                bg-[color-mix(in_oklch,var(--primary)_6%,transparent)]
+                                border border-[color-mix(in_oklch,var(--primary)_25%,transparent)]">
+                                <FileSpreadsheet size={18} className="text-primary flex-shrink-0" />
+                                <span className="text-sm font-medium flex-1 truncate font-['DM_Mono',monospace]">
+                                    {file.name}
+                                </span>
+                                <span className="text-xs flex-shrink-0 font-['DM_Mono',monospace] text-muted-foreground">
+                                    {(file.size / 1024 / 1024).toFixed(2)} MB
+                                </span>
+                                <button onClick={() => setFile(null)} className="text-zinc-400 hover:text-destructive transition-colors flex-shrink-0">
+                                    <X size={16} />
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Submit */}
+                        <button
+                            onClick={handleSubmit}
+                            disabled={!file || uploading}
+                            className="w-full flex items-center justify-center gap-2 py-2.5 px-6 rounded-lg
+                                font-semibold text-sm font-['Syne',sans-serif]
+                                bg-primary text-primary-foreground
+                                transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {uploading ? <><Loader size={16} className="animate-spin" /> Uploading...</>
+                                       : <><Upload size={16} /> Upload & Import</>}
+                        </button>
+                    </div>
+
+                    {/* ── Schema card ───────────────────────────────────── */}
+                    <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
+                        <p className="text-xs font-semibold uppercase tracking-wide mb-3
+                            font-['DM_Mono',monospace] text-muted-foreground">
                             Expected Column Headers
                         </p>
+
                         <div className="grid grid-cols-3 gap-2">
-                            {["state", "zone", "lga", "ra", "pu", "delim"].map((col) => (
-                                <div key={col} className="text-center px-2 py-1.5 rounded-lg text-xs font-semibold"
-                                    style={{
-                                        fontFamily: "'DM Mono', monospace",
-                                        background: "color-mix(in oklch, var(--primary) 8%, transparent)",
-                                        color: "var(--primary)",
-                                        border: "1px solid color-mix(in oklch, var(--primary) 20%, transparent)"
-                                    }}>
+                            {COLUMNS.map(([col]) => (
+                                <div key={col}
+                                    className="text-center px-2 py-1.5 rounded-lg text-xs font-semibold
+                                        font-['DM_Mono',monospace] text-primary
+                                        bg-[color-mix(in_oklch,var(--primary)_8%,transparent)]
+                                        border border-[color-mix(in_oklch,var(--primary)_20%,transparent)]">
                                     {col}
                                 </div>
                             ))}
                         </div>
 
-                        <hr className="my-4" style={{ borderColor: "var(--border)" }} />
+                        <hr className="my-4 border-border" />
 
-                        <p className="text-xs font-semibold uppercase tracking-wide mb-2"
-                            style={{ fontFamily: "'DM Mono', monospace", color: "var(--muted-foreground)" }}>
+                        <p className="text-xs font-semibold uppercase tracking-wide mb-2
+                            font-['DM_Mono',monospace] text-muted-foreground">
                             Column Descriptions
                         </p>
+
                         <div className="space-y-2">
-                            {[
-                                ["state", "State name"],
-                                ["zone",  "Senatorial zone"],
-                                ["lga",   "Local Government Area"],
-                                ["ra",    "Registration Area (Ward)"],
-                                ["pu",    "Polling Unit name"],
-                                ["delim", "Polling Unit number"],
-                            ].map(([col, desc]) => (
+                            {COLUMNS.map(([col, desc]) => (
                                 <div key={col} className="flex items-start gap-2 text-xs">
-                                    <span className="font-semibold flex-shrink-0 w-12"
-                                        style={{ fontFamily: "'DM Mono', monospace", color: "var(--primary)" }}>
+                                    <span className="font-semibold flex-shrink-0 w-12 font-['DM_Mono',monospace] text-primary">
                                         {col}
                                     </span>
-                                    <span style={{ color: "var(--muted-foreground)" }}>{desc}</span>
+                                    <span className="text-muted-foreground">{desc}</span>
                                 </div>
                             ))}
                         </div>
                     </div>
+
                 </div>
-            </div>
-        </>
+            )}
+        </div>
     );
 }

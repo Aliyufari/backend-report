@@ -2,17 +2,17 @@
 
 namespace App\Jobs;
 
-use App\Events\UploadProgressUpdated;
+use Throwable;
 use App\Imports\PusImport;
+use Illuminate\Bus\Queueable;
+use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Facades\Cache;
+use App\Events\UploadProgressUpdated;
+use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Storage;
-use Maatwebsite\Excel\Facades\Excel;
-use Throwable;
 
 class ProcessPusUpload implements ShouldQueue
 {
@@ -21,62 +21,119 @@ class ProcessPusUpload implements ShouldQueue
     public int $tries = 1;
     public int $timeout = 600;
 
-    /**
-     * Create a new job instance.
-     */
     public function __construct(
         protected string $uploadId,
         protected string $filePath,
         protected string $userId,
     ) {}
 
-    /**
-     * Execute the job.
-     */
     public function handle(): void
     {
-        $this->updateProgress('processing', 10, 'Reading file...');
+        Cache::forget("upload_processed_rows_{$this->uploadId}");
 
         try {
-            $this->updateProgress('processing', 30, 'Importing rows...');
+            // Initial queued state
+            $this->updateProgress('pending', 0, 'Queued for processing...');
 
-            Excel::import(new PusImport(), Storage::path($this->filePath));
+            // Reading file
+            $this->updateProgress('processing', 5, 'Reading file...');
 
+            // Count rows first for proper percentage
+            $estimatedTotal = $this->countRows();
+
+            // Start import
+            $this->updateProgress('processing', 10, 'Starting import...');
+
+            Excel::import(
+                new PusImport(
+                    $this->uploadId,
+                    $this->userId,
+                    $estimatedTotal
+                ),
+                Storage::path($this->filePath)
+            );
+
+            // Final completion
             $this->updateProgress('done', 100, 'Upload complete.');
 
-            // Clean up temp file
             Storage::delete($this->filePath);
         } catch (Throwable $e) {
-            $this->updateProgress('failed', 0, 'Upload failed: ' . $e->getMessage());
+            $this->updateProgress(
+                'failed',
+                0,
+                'Upload failed: ' . $e->getMessage()
+            );
+
             Storage::delete($this->filePath);
+
             throw $e;
         }
     }
 
     public function failed(Throwable $e): void
     {
-        $this->updateProgress('failed', 0, 'Job failed: ' . $e->getMessage());
+        $this->updateProgress(
+            'failed',
+            0,
+            'Job failed: ' . $e->getMessage()
+        );
+
         Storage::delete($this->filePath);
     }
 
-    // ─────────────────────────────────────────────
-    // Store progress in cache (persists across requests)
-    // Key: upload_progress_{uploadId}
-    // TTL: 24 hours so user can return and still see it
-    // ─────────────────────────────────────────────
-    protected function updateProgress(string $status, int $percent, string $message): void
+    protected function countRows(): int
     {
+        try {
+            $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load(
+                Storage::path($this->filePath)
+            );
+
+            // Remove heading row
+            return max(
+                0,
+                $spreadsheet->getActiveSheet()->getHighestRow() - 1
+            );
+        } catch (Throwable) {
+            // Fallback if count fails
+            return 0;
+        }
+    }
+
+    protected function updateProgress(
+        string $status,
+        int $percent,
+        string $message
+    ): void {
+        // Prevent stale progress from overwriting newer progress
+        $existing = Cache::get("upload_progress_{$this->uploadId}");
+
+        if (
+            $existing &&
+            isset($existing['updated_at']) &&
+            strtotime($existing['updated_at']) > now()->timestamp
+        ) {
+            return;
+        }
+
         $data = [
             'upload_id' => $this->uploadId,
-            'status'    => $status,   // pending | processing | done | failed
-            'percent'   => $percent,
-            'message'   => $message,
+            'status' => $status,
+            'percent' => max(0, min(100, $percent)),
+            'message' => $message,
             'updated_at' => now()->toISOString(),
         ];
 
-        Cache::put("upload_progress_{$this->uploadId}", $data, now()->addHours(24));
+        Cache::put(
+            "upload_progress_{$this->uploadId}",
+            $data,
+            now()->addHours(24)
+        );
 
-        // Broadcast to the user's private channel so the frontend updates live
-        event(new UploadProgressUpdated($this->userId, $data));
+        event(
+            new UploadProgressUpdated(
+                $this->userId,
+                $data
+            )
+        );
     }
 }

@@ -18,7 +18,7 @@ class ProfileController extends Controller
     public function index(Request $request): Response
     {
         return Inertia::render('dashboard/profile/Index', [
-            'profile' => $request->user()->load('role'),
+            'profile' => $request->user()->load('roles'),
         ]);
     }
 

@@ -1,32 +1,22 @@
-// import { type SharedData } from '@/types'
-import { Head, Link, usePage } from '@inertiajs/react'
+import { Head, Link } from '@inertiajs/react'
 import bannerImage from '@/assets/images/banner.jpg'
 import logo from '@/assets/images/logo.png'
 import { login, register } from '@/routes'
 
 export default function Welcome() {
-    // const { auth } = usePage<SharedData>().props
-
     return (
         <>
             <Head title="Backend Report">
                 <link rel="preconnect" href="https://fonts.bunny.net" />
-                <link
-                    href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700"
-                    rel="stylesheet"
-                />
+                <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700" rel="stylesheet" />
             </Head>
 
             <section
-                className="relative min-h-screen flex flex-col"
-                style={{
-                    backgroundImage: `url("${bannerImage}")`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                }}
+                className="relative min-h-screen flex flex-col bg-cover bg-center"
+                style={{ backgroundImage: `url("${bannerImage}")` }}
             >
-                {/* Dark Overlay */}
-                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+                {/* Dark overlay */}
+                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
 
                 {/* Header */}
                 <header className="relative z-10 w-full">
@@ -40,14 +30,14 @@ export default function Welcome() {
 
                         <Link
                             href={login()}
-                            className="bg-primary hover:bg-green-600 text-white font-medium px-5 py-2.5 rounded-lg transition duration-300 shadow-md"
+                            className="bg-primary hover:bg-green-600 text-white font-medium px-5 py-2.5 rounded-lg transition-colors duration-300 shadow-md"
                         >
                             Login
                         </Link>
                     </div>
                 </header>
 
-                {/* Hero Content */}
+                {/* Hero */}
                 <div className="relative z-10 flex flex-1 items-center justify-center px-6">
                     <div className="max-w-3xl text-center text-white space-y-8">
                         <h1 className="text-4xl md:text-6xl font-bold leading-tight">
@@ -55,23 +45,25 @@ export default function Welcome() {
                         </h1>
 
                         <p className="text-lg md:text-xl text-gray-200 leading-relaxed">
-                            Backend Report is a comprehensive platform designed to
-                            track Continuous Voter Registration (CVR) records of INEC Nigeria,
-                            analyze polling unit and accreditation data, and manage verified
-                            voting results across all states nationwide.
+                            Backend Report is a comprehensive platform designed to track Continuous
+                            Voter Registration (CVR) records of INEC Nigeria, analyze polling unit
+                            and accreditation data, and manage verified voting results across all
+                            states nationwide.
                         </p>
 
                         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                            <Link
-                                href={register()}
-                                className="bg-primary hover:bg-green-600 text-white font-semibold px-8 py-4 rounded-xl transition duration-300 shadow-lg"
-                            >
-                                Get Started
-                            </Link>
+                            {register && (
+                                <Link
+                                    href={register()}
+                                    className="bg-primary hover:bg-green-600 text-white font-semibold px-8 py-4 rounded-xl transition-colors duration-300 shadow-lg"
+                                >
+                                    Get Started
+                                </Link>
+                            )}
 
                             <a
                                 href="#about"
-                                className="border border-white/40 hover:bg-white/10 text-white px-8 py-4 rounded-xl transition duration-300"
+                                className="border border-white/40 hover:bg-white/10 text-white px-8 py-4 rounded-xl transition-colors duration-300"
                             >
                                 Learn More
                             </a>
