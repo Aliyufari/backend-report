@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateZoneRequest extends FormRequest
 {
@@ -11,7 +12,7 @@ class UpdateZoneRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -22,7 +23,14 @@ class UpdateZoneRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'name' => [
+                'required', 'string', 'max:100',
+                Rule::unique('zones', 'name')
+                    ->where('state_id', $this->state_id)
+                    ->ignore($this->route('zone')),
+            ],
+            'state_id' => ['required', 'uuid', 'exists:states,id'],
         ];
+
     }
 }

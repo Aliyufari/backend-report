@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StorePuRequest extends FormRequest
 {
@@ -11,7 +12,7 @@ class StorePuRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -22,7 +23,12 @@ class StorePuRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'name'    => [
+                'required', 'string', 'max:150',
+                Rule::unique('pus', 'name')->where('ward_id', $this->ward_id),
+            ],
+            'code'    => ['nullable', 'string', 'max:50', Rule::unique('pus', 'code')],
+            'ward_id' => ['required', 'uuid', 'exists:wards,id'],
         ];
     }
 }

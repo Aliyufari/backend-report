@@ -2,65 +2,85 @@
 
 namespace App\Policies;
 
+use App\Enums\Role;
 use App\Models\User;
 use App\Models\Ward;
-use Illuminate\Auth\Access\Response;
 
 class WardPolicy
 {
-    /**
-     * Determine whether the user can view any models.
-     */
     public function viewAny(User $user): bool
     {
-        return false;
+        return $user->hasAnyRole([
+            Role::SUPER_ADMIN->value,
+            Role::ADMIN->value,
+            Role::GOVERNOR->value,
+            Role::STATE_COORDINATOR->value,
+            Role::ZONAL_COORDINATOR->value,
+            Role::LGA_COORDINATOR->value,
+            Role::WARD_COORDINATOR->value,
+        ]);
     }
 
-    /**
-     * Determine whether the user can view the model.
-     */
     public function view(User $user, Ward $ward): bool
     {
+        if ($user->hasAnyRole([
+            Role::SUPER_ADMIN->value,
+            Role::ADMIN->value,
+            Role::GOVERNOR->value,
+        ])) {
+            return true;
+        }
+
+        if ($user->hasRole(Role::STATE_COORDINATOR->value)) {
+            return $ward->lga?->zone?->state_id === $user->location_id;
+        }
+
+        if ($user->hasRole(Role::ZONAL_COORDINATOR->value)) {
+            return $ward->lga?->zone_id === $user->location_id;
+        }
+
+        if ($user->hasRole(Role::LGA_COORDINATOR->value)) {
+            return $ward->lga_id === $user->location_id;
+        }
+
+        if ($user->hasRole(Role::WARD_COORDINATOR->value)) {
+            return $ward->id === $user->location_id;
+        }
+
         return false;
     }
 
-    /**
-     * Determine whether the user can create models.
-     */
     public function create(User $user): bool
     {
-        return false;
+        return $user->hasAnyRole([
+            Role::SUPER_ADMIN->value,
+            Role::ADMIN->value,
+        ]);
     }
 
-    /**
-     * Determine whether the user can update the model.
-     */
     public function update(User $user, Ward $ward): bool
     {
-        return false;
+        return $user->hasAnyRole([
+            Role::SUPER_ADMIN->value,
+            Role::ADMIN->value,
+        ]);
     }
 
-    /**
-     * Determine whether the user can delete the model.
-     */
     public function delete(User $user, Ward $ward): bool
     {
-        return false;
+        return $user->hasAnyRole([
+            Role::SUPER_ADMIN->value,
+            Role::ADMIN->value,
+        ]);
     }
 
-    /**
-     * Determine whether the user can restore the model.
-     */
     public function restore(User $user, Ward $ward): bool
     {
-        return false;
+        return $user->hasRole(Role::SUPER_ADMIN->value);
     }
 
-    /**
-     * Determine whether the user can permanently delete the model.
-     */
     public function forceDelete(User $user, Ward $ward): bool
     {
-        return false;
+        return $user->hasRole(Role::SUPER_ADMIN->value);
     }
 }

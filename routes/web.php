@@ -25,8 +25,9 @@ Route::get('/debug', function () {
     ];
 });
 
+require __DIR__ . '/auth.php';
 require __DIR__ . '/profile.php';
+require __DIR__ . '/upload.php';
 require __DIR__ . '/cvrs.php';
 require __DIR__ . '/users.php';
-require __DIR__ . '/upload.php';
-require __DIR__ . '/auth.php';
+require __DIR__ . '/locations.php';

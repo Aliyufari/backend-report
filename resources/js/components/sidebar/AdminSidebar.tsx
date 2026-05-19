@@ -10,7 +10,11 @@ import {
     CloudUpload,
     IdCard,
     FingerprintIcon,
-      
+    House,
+    Layers,       
+    Building2,    
+    LayoutGrid,   
+    CircleDot,    
 } from "lucide-react";
 import useRole from "@/hooks/auth/useRole";
 
@@ -53,6 +57,41 @@ const AdminSideNavLinks = () => {
             compare: url.startsWith("/lgas/spos"),
             icon: <FingerprintIcon size={16} />,
             excludes: [] as string[],
+        },
+        {
+            name: "States",
+            path: "/admin/states",
+            compare: url.startsWith("/admin/states"),
+            icon: <House size={16} />,
+            excludes: ["chairman", "hakimi"] as string[],
+        },
+        {
+            name: "Zones",
+            path: "/admin/zones",
+            compare: url.startsWith("/admin/zones"),
+            icon: <Layers size={16} />,
+            excludes: ["chairman", "hakimi"] as string[],
+        },
+        {
+            name: "LGAs",
+            path: "/admin/lgas",
+            compare: url.startsWith("/admin/lgas"),
+            icon: <Building2 size={16} />,
+            excludes: ["chairman", "hakimi"] as string[],
+        },
+        {
+            name: "Wards",
+            path: "/admin/wards",
+            compare: url.startsWith("/admin/wards"),
+            icon: <LayoutGrid size={16} />,
+            excludes: ["chairman", "hakimi"] as string[],
+        },
+        {
+            name: "Polling Units",
+            path: "/admin/pus",
+            compare: url.startsWith("/admin/pus"),
+            icon: <CircleDot size={16} />,
+            excludes: ["chairman", "hakimi"] as string[],
         },
         {
             name: "Upload CSV",

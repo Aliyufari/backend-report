@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateWardRequest extends FormRequest
 {
@@ -11,7 +12,7 @@ class UpdateWardRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -22,7 +23,14 @@ class UpdateWardRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'name' => [
+                'required', 'string', 'max:100',
+                Rule::unique('wards', 'name')
+                    ->where('lga_id', $this->lga_id)
+                    ->ignore($this->route('ward')),
+            ],
+            'lga_id' => ['required', 'uuid', 'exists:lgas,id'],
         ];
+
     }
 }

@@ -2,65 +2,77 @@
 
 namespace App\Policies;
 
+use App\Enums\Role;
 use App\Models\State;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
 
 class StatePolicy
 {
     /**
-     * Determine whether the user can view any models.
+     * super_admin, admin, governor, and all coordinators can view the states list
+     * (needed for dropdowns and location context throughout the app).
      */
     public function viewAny(User $user): bool
     {
-        return false;
+        return $user->hasAnyRole([
+            Role::SUPER_ADMIN->value,
+            Role::ADMIN->value,
+            Role::GOVERNOR->value,
+            Role::STATE_COORDINATOR->value,
+            Role::ZONAL_COORDINATOR->value,
+            Role::LGA_COORDINATOR->value,
+            Role::WARD_COORDINATOR->value,
+        ]);
     }
 
     /**
-     * Determine whether the user can view the model.
+     * Same as viewAny — any authenticated role can view a single state.
      */
     public function view(User $user, State $state): bool
     {
-        return false;
+        return $this->viewAny($user);
     }
 
     /**
-     * Determine whether the user can create models.
+     * Only super_admin and admin can create states.
      */
     public function create(User $user): bool
     {
-        return false;
+        return $user->hasAnyRole([
+            Role::SUPER_ADMIN->value,
+            Role::ADMIN->value,
+        ]);
     }
 
     /**
-     * Determine whether the user can update the model.
+     * Only super_admin and admin can update states.
      */
     public function update(User $user, State $state): bool
     {
-        return false;
+        return $user->hasAnyRole([
+            Role::SUPER_ADMIN->value,
+            Role::ADMIN->value,
+        ]);
     }
 
     /**
-     * Determine whether the user can delete the model.
+     * Only super_admin and admin can delete states.
      */
     public function delete(User $user, State $state): bool
     {
-        return false;
+        return $user->hasAnyRole([
+            Role::SUPER_ADMIN->value,
+            Role::ADMIN->value,
+        ]);
     }
 
-    /**
-     * Determine whether the user can restore the model.
-     */
     public function restore(User $user, State $state): bool
     {
-        return false;
+        return $user->hasRole(Role::SUPER_ADMIN->value);
     }
 
-    /**
-     * Determine whether the user can permanently delete the model.
-     */
     public function forceDelete(User $user, State $state): bool
     {
-        return false;
+        return $user->hasRole(Role::SUPER_ADMIN->value);
     }
 }

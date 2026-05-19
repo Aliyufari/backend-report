@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateLgaRequest extends FormRequest
 {
@@ -11,7 +12,7 @@ class UpdateLgaRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -22,7 +23,13 @@ class UpdateLgaRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'name' => [
+                'required', 'string', 'max:100',
+                Rule::unique('lgas', 'name')
+                    ->where('zone_id', $this->zone_id)
+                    ->ignore($this->route('lga')),
+            ],
+            'zone_id' => ['required', 'uuid', 'exists:zones,id'],
         ];
     }
 }
