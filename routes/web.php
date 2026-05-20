@@ -31,3 +31,4 @@ require __DIR__ . '/upload.php';
 require __DIR__ . '/cvrs.php';
 require __DIR__ . '/users.php';
 require __DIR__ . '/locations.php';
+require __DIR__ . '/countdown.php';

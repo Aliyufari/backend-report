@@ -20,9 +20,10 @@ class CvrController extends Controller
     public function index(Request $request)
     {
         try {
-            // $this->authorize('viewAny', Cvr::class);
+            $this->authorize('viewAny', Cvr::class);
+            $user = auth()->user();
 
-            $cvrs = Cvr::visibleTo(auth()->user())
+            $cvrs = Cvr::visibleTo($user)
                 ->with(['pu.ward.lga.zone.state'])
                 ->when(
                     $request->search,
@@ -47,6 +48,15 @@ class CvrController extends Controller
                 ->orderBy('name')
                 ->get();
 
+            $baseQuery = Cvr::visibleTo($user);
+
+            $statistics = [
+                'total' => (clone $baseQuery)->count(),
+                'pending' => (clone $baseQuery)->where('status', CvrStatus::PENDING)->count(),
+                'approved' => (clone $baseQuery)->where('status', CvrStatus::APPROVED)->count(),
+                'rejected' => (clone $baseQuery)->where('status', CvrStatus::REJECTED)->count(),
+            ];
+
             return inertia('dashboard/admin/cvrs/Index', [
                 'cvrs'     => CvrResource::collection($cvrs),
                 'state'    => $state,
@@ -59,6 +69,12 @@ class CvrController extends Controller
                     'value' => $s->value,
                     'label' => $s->name,
                 ]),
+
+                'statistics' => $statistics,
+
+                'permissions' => [
+                    'can_create' => $user->can('create', Cvr::class)
+                ]
             ]);
         } catch (\Throwable $e) {
             Log::error('Failed to load CVRs', ['message' => $e->getMessage()]);

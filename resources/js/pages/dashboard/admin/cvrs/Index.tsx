@@ -12,78 +12,115 @@ import cvrs from "@/routes/cvrs";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface Pu    { id: string; name: string; number?: string; ward?: { id: string; name: string; lga?: { id: string; name: string; zone?: { id: string; name: string; state?: { id: string; name: string } } } }; }
-interface Ward  { id: string; name: string; pus:   Pu[];    }
-interface Lga   { id: string; name: string; wards: Ward[];  }
-interface Zone  { id: string; name: string; lgas:  Lga[];   }
-interface State { id: string; name: string; zones: Zone[];  }
+interface Pu { id: string; name: string; number?: string; ward?: any; }
+interface State { id: string; name: string; zones: any[]; }
+
 interface Option { value: string; label: string; }
 
-interface CvrPu {
-    id: string; name: string; number?: string;
-    ward?: { id: string; name: string; lga?: { id: string; name: string } };
-}
-
 interface Cvr {
-    id: string; unique_id: string;
-    type: string; status: string; pu_id: string;
-    pu?: CvrPu;
+    id: string;
+    unique_id: string;
+    type: string;
+    status: string;
+    pu_id: string;
+    pu?: any;
     created_at: string;
     [key: string]: unknown;
 }
 
 interface Paginated<T> {
-    data: T[]; links: { url: string | null; label: string; active: boolean }[];
-    current_page: number; last_page: number;
-    total: number; from: number; to: number;
+    data: T[];
+    links: any[];
+    current_page: number;
+    last_page: number;
+    total: number;
+    from: number;
+    to: number;
 }
 
 interface PageProps {
-    cvrs:     Paginated<Cvr>;
-    state:    State[];
-    types:    Option[];
+    cvrs: Paginated<Cvr>;
+    state: State[];
+    types: Option[];
     statuses: Option[];
-    filters:  { search?: string; type?: string; status?: string; pu?: string };
-    flash?:   { status?: boolean; message?: string };
+    filters: any;
+    flash?: any;
+
+    statistics: {
+        total: number;
+        pending: number;
+        approved: number;
+        rejected: number;
+    };
+
+    permissions: {
+        can_create: boolean;
+    };
+
     [key: string]: unknown;
 }
 
 // ─── Badge config ─────────────────────────────────────────────────────────────
 
-const TYPE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-    registration: { bg: "bg-blue-500/10",   text: "text-blue-500",   border: "border-blue-500/20"   },
-    update:       { bg: "bg-amber-500/10",  text: "text-amber-600",  border: "border-amber-500/20"  },
-    transfer:     { bg: "bg-violet-500/10", text: "text-violet-600", border: "border-violet-500/20" },
+const STATUS_COLORS: Record<string, string> = {
+    pending: "text-amber-600",
+    approved: "text-emerald-600",
+    rejected: "text-red-600",
 };
 
-const STATUS_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-    pending:  { bg: "bg-amber-500/10",   text: "text-amber-600",  border: "border-amber-500/20"  },
-    approved: { bg: "bg-emerald-500/10", text: "text-emerald-600",border: "border-emerald-500/20" },
-    rejected: { bg: "bg-red-500/10",     text: "text-red-600",    border: "border-red-500/20"    },
-};
+// ─── Stat card config ─────────────────────────────────────────────────────────
 
-const FALLBACK = { bg: "bg-muted", text: "text-muted-foreground", border: "border-border" };
-
-function Badge({ value, map }: { value: string; map: Record<string, { bg: string; text: string; border: string }> }) {
-    const cfg = map[value] ?? FALLBACK;
-    return (
-        <span className={`inline-flex items-center px-2.5 py-[3px] rounded-full text-[11px]
-            font-['DM_Mono',monospace] font-medium capitalize whitespace-nowrap
-            border ${cfg.bg} ${cfg.text} ${cfg.border}`}>
-            {value}
-        </span>
-    );
-}
+const buildStats = (statistics: PageProps["statistics"]) => [
+    {
+        label: "Total Records",
+        value: statistics.total,
+        color: "bg-blue-50 border-blue-200",
+        valueColor: "text-blue-800",
+        dot: "bg-blue-400",
+    },
+    {
+        label: "Pending",
+        value: statistics.pending,
+        color: "bg-amber-50 border-amber-200",
+        valueColor: "text-amber-600",
+        dot: "bg-amber-400",
+    },
+    {
+        label: "Approved",
+        value: statistics.approved,
+        color: "bg-emerald-50 border-emerald-200",
+        valueColor: "text-emerald-600",
+        dot: "bg-emerald-400",
+    },
+    {
+        label: "Rejected",
+        value: statistics.rejected,
+        color: "bg-red-50 border-red-200",
+        valueColor: "text-red-600",
+        dot: "bg-red-400",
+    },
+];
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function CvrsIndex() {
     const { props } = usePage<PageProps>();
-    const { cvrs: cvrsData, state, types, statuses, filters, flash } = props;
+    const {
+        cvrs: cvrsData,
+        state,
+        types,
+        statuses,
+        filters,
+        flash,
+        statistics,
+        permissions
+    } = props;
 
-    const [showModal,  setShowModal]  = useState(false);
-    const [editCvr,    setEditCvr]    = useState<Cvr | null>(null);
-    const [deleteCvr,  setDeleteCvr]  = useState<Cvr | null>(null);
+    const [showModal, setShowModal] = useState(false);
+    const [editCvr, setEditCvr] = useState<Cvr | null>(null);
+    const [deleteCvr, setDeleteCvr] = useState<Cvr | null>(null);
+
+    const stats = buildStats(statistics);
 
     useEffect(() => {
         if (flash?.message) {
@@ -91,138 +128,128 @@ export default function CvrsIndex() {
         }
     }, [flash]);
 
-    const openCreate = () => { setEditCvr(null); setShowModal(true); };
-    const openEdit   = (cvr: Cvr) => { setEditCvr(cvr); setShowModal(true); };
+    const openCreate = () => {
+        setEditCvr(null);
+        setShowModal(true);
+    };
+
+    const openEdit = (cvr: Cvr) => {
+        setEditCvr(cvr);
+        setShowModal(true);
+    };
+
     const openDelete = (cvr: Cvr) => setDeleteCvr(cvr);
-
-    // ── Column definitions ────────────────────────────────────────────────────
-
-    const columns: Column<Cvr>[] = [
-        {
-            key: "unique_id",
-            label: "Unique ID",
-            accessor: (row) => (
-                <span className="font-['DM_Mono',monospace] font-semibold text-[12px] tracking-[0.05em]">
-                    {row.unique_id}
-                </span>
-            ),
-        },
-        {
-            key: "type",
-            label: "Type",
-            accessor: (row) => <Badge value={row.type} map={TYPE_COLORS} />,
-        },
-        {
-            key: "status",
-            label: "Status",
-            accessor: (row) => <Badge value={row.status} map={STATUS_COLORS} />,
-        },
-        {
-            key: "pu",
-            label: "Polling Unit",
-            accessor: (row) => (
-                <span className="font-['DM_Mono',monospace] text-[12px] text-foreground">
-                    {row.pu?.number ? `${row.pu.number} — ` : ""}{row.pu?.name ?? "—"}
-                </span>
-            ),
-        },
-        {
-            key: "ward",
-            label: "Ward",
-            accessor: (row) => (
-                <span className="font-['DM_Mono',monospace] text-[12px] text-muted-foreground">
-                    {row.pu?.ward?.name ?? "—"}
-                </span>
-            ),
-        },
-        {
-            key: "lga",
-            label: "LGA",
-            accessor: (row) => (
-                <span className="font-['DM_Mono',monospace] text-[12px] text-muted-foreground">
-                    {row.pu?.ward?.lga?.name ?? "—"}
-                </span>
-            ),
-        },
-        {
-            key: "created_at",
-            label: "Created",
-            accessor: (row) => (
-                <span className="font-['DM_Mono',monospace] text-[11px] text-muted-foreground">
-                    {new Date(row.created_at).toLocaleDateString("en-GB", {
-                        day: "2-digit", month: "short", year: "numeric",
-                    })}
-                </span>
-            ),
-        },
-        { key: "actions", label: "Actions", type: "actions", align: "right" },
-    ];
 
     return (
         <>
             <Head title="CVR Records" />
+
             <AppLayout
                 SideNavigation={AdminSidebar}
                 title="CVR Records"
                 sub="Manage continuous voter registration records"
                 live
                 actions={
-                    <button
-                        onClick={openCreate}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold
+                    permissions?.can_create && (
+                        <button
+                            onClick={openCreate}
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold
                             font-['Syne',sans-serif] bg-primary text-primary-foreground
                             transition-all hover:opacity-90"
-                    >
-                        <IdCard size={15} />
-                        Add CVR
-                    </button>
+                        >
+                            <IdCard size={15} />
+                            Add CVR
+                        </button>
+                    )
                 }
             >
+
+                {/* ─── STATISTICS DASHBOARD ───────────────────── */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                    {stats.map(({ label, value, color, valueColor, dot }) => (
+                        <div
+                            key={label}
+                            className={`relative flex flex-col gap-3 p-4 rounded-xl border ${color} overflow-hidden`}
+                        >
+                            {/* ghost watermark number */}
+                            <span
+                                aria-hidden
+                                className="pointer-events-none absolute -bottom-3 -right-1 text-7xl font-black opacity-[0.06] select-none leading-none"
+                            >
+                                {value.toLocaleString()}
+                            </span>
+
+                            <span className="flex items-center gap-1.5">
+                                <span className={`inline-block w-2 h-2 rounded-full ${dot}`} />
+                                <span className="text-xs font-medium text-muted-foreground tracking-wide uppercase">
+                                    {label}
+                                </span>
+                            </span>
+
+                            <span className={`text-2xl font-bold tabular-nums ${valueColor}`}>
+                                {value.toLocaleString()}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+
+                {/* ─── TABLE ─────────────────────────────────────── */}
                 <DataTable
                     data={cvrsData}
-                    columns={columns}
-                    indexUrl={cvrs.index().url}
-                    filters={filters as Record<string, string>}
-                    filterConfigs={[
+                    columns={[
+                        {
+                            key: "unique_id",
+                            label: "Unique ID",
+                            accessor: (row) => (
+                                <span className="font-mono text-[12px] font-semibold">
+                                    {row.unique_id}
+                                </span>
+                            ),
+                        },
                         {
                             key: "type",
                             label: "Type",
-                            value: filters.type ?? "",
-                            options: types,
+                            accessor: (row) => (
+                                <span className="capitalize">{row.type}</span>
+                            ),
                         },
                         {
                             key: "status",
                             label: "Status",
-                            value: filters.status ?? "",
-                            options: statuses,
+                            accessor: (row) => (
+                                <span className={`capitalize ${STATUS_COLORS[row.status] ?? ""}`}>
+                                    {row.status}
+                                </span>
+                            ),
                         },
+                        {
+                            key: "created_at",
+                            label: "Created",
+                            accessor: (row) => (
+                                <span className="text-xs text-muted-foreground">
+                                    {new Date(row.created_at).toLocaleDateString()}
+                                </span>
+                            ),
+                        },
+                        { key: "actions", label: "Actions", type: "actions", align: "right" },
+                    ]}
+                    indexUrl={cvrs.index().url}
+                    filters={filters}
+                    filterConfigs={[
+                        { key: "type", label: "Type", value: filters.type ?? "", options: types },
+                        { key: "status", label: "Status", value: filters.status ?? "", options: statuses },
                     ]}
                     searchPlaceholder="Search unique ID..."
                     noun="records"
                     reloadOnly={["cvrs"]}
                     emptyIcon={<IdCard size={32} />}
                     renderActions={(row) => (
-                        <div className="flex items-center justify-end gap-1.5">
-                            <button
-                                title="Edit"
-                                onClick={() => openEdit(row)}
-                                className="w-[30px] h-[30px] rounded-[7px] inline-flex items-center justify-center
-                                    border border-border bg-transparent cursor-pointer transition-all duration-150
-                                    text-muted-foreground hover:bg-muted hover:text-foreground"
-                            >
-                                <Pencil size={13} />
+                        <div className="flex items-center gap-2 justify-end">
+                            <button onClick={() => openEdit(row)}>
+                                <Pencil size={14} />
                             </button>
-                            <button
-                                title="Delete"
-                                onClick={() => openDelete(row)}
-                                className="w-[30px] h-[30px] rounded-[7px] inline-flex items-center justify-center
-                                    border border-border bg-transparent cursor-pointer transition-all duration-150
-                                    text-muted-foreground
-                                    hover:bg-[color-mix(in_oklch,var(--destructive)_10%,transparent)]
-                                    hover:text-destructive
-                                    hover:border-[color-mix(in_oklch,var(--destructive)_30%,transparent)]"
-                            >
-                                <Trash2 size={13} />
+                            <button onClick={() => openDelete(row)}>
+                                <Trash2 size={14} />
                             </button>
                         </div>
                     )}
@@ -236,11 +263,13 @@ export default function CvrsIndex() {
                     statuses={statuses}
                     cvr={editCvr}
                 />
+
                 <DeleteCvrModal
                     open={!!deleteCvr}
                     onClose={() => setDeleteCvr(null)}
                     cvr={deleteCvr}
                 />
+
             </AppLayout>
         </>
     );

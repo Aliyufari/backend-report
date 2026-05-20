@@ -34,7 +34,7 @@ export function PieDonut() {
     const { ref, ready } = useChart();
 
     return (
-        <Card data-chart={id} className="flex flex-col w-full min-w-0">
+        <Card data-chart={id} className="flex flex-col w-full min-w-0 h-full">
             <ChartStyle id={id} config={chartConfig} />
             <CardHeader className="pb-2">
                 <div className="flex items-start justify-between gap-2">
@@ -64,8 +64,9 @@ export function PieDonut() {
                 </div>
             </CardHeader>
 
-            <CardContent className="flex flex-col items-center pt-0 pb-4">
-                <div ref={ref} className="w-full min-w-0 h-[220px]">
+            {/* flex-1 + justify-between spreads pie and legend to fill whatever height the card has */}
+            <CardContent className="flex flex-col flex-1 min-h-0 items-center justify-between pt-0 pb-4 gap-4">
+                <div ref={ref} className="w-full min-w-0 flex-1 min-h-0" style={{ minHeight: 180 }}>
                     {ready && (
                         <ChartContainer id={id} config={chartConfig} className="w-full h-full">
                             <PieChart>
@@ -111,6 +112,7 @@ export function PieDonut() {
                     )}
                 </div>
 
+                {/* Legend pinned to bottom of card */}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 12px", width: "100%", paddingInline: 8 }}>
                     {data.map((item) => (
                         <button

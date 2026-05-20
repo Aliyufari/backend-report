@@ -2,31 +2,30 @@
 
 namespace App\Policies;
 
-use App\Enums\Role;
+use App\Enums\Role as RoleEnum;
 use App\Models\Cvr;
 use App\Models\User;
 
 class CvrPolicy
 {
     /**
-     * Super admin and admin can view any CVR.
-     * Coordinators can view CVRs within their jurisdiction.
+     * Anyone in the system hierarchy can view list
      */
     public function viewAny(User $user): bool
     {
-        return in_array($user->role?->name, [
-            Role::SUPER_ADMIN->value,
-            Role::ADMIN->value,
-            Role::GOVERNOR->value,
-            Role::STATE_COORDINATOR->value,
-            Role::ZONAL_COORDINATOR->value,
-            Role::LGA_COORDINATOR->value,
-            Role::WARD_COORDINATOR->value,
+        return $user->hasAnyRole([
+            RoleEnum::SUPER_ADMIN->value,
+            RoleEnum::ADMIN->value,
+            RoleEnum::GOVERNOR->value,
+            RoleEnum::STATE_COORDINATOR->value,
+            RoleEnum::ZONAL_COORDINATOR->value,
+            RoleEnum::LGA_COORDINATOR->value,
+            RoleEnum::WARD_COORDINATOR->value,
         ]);
     }
 
     /**
-     * A user can view a CVR if it falls within their jurisdiction.
+     * View single CVR (strict jurisdiction check)
      */
     public function view(User $user, Cvr $cvr): bool
     {
@@ -34,33 +33,26 @@ class CvrPolicy
     }
 
     /**
-     * Coordinators and above can create CVRs within their jurisdiction.
+     * Create CVR (based on role only)
      */
     public function create(User $user): bool
     {
-        return in_array($user->role?->name, [
-            Role::SUPER_ADMIN->value,
-            Role::ADMIN->value,
-            Role::STATE_COORDINATOR->value,
-            Role::ZONAL_COORDINATOR->value,
-            Role::LGA_COORDINATOR->value,
-            Role::WARD_COORDINATOR->value,
+        return $user->hasAnyRole([
+            RoleEnum::SUPER_ADMIN->value,
+            RoleEnum::ADMIN->value,
+            RoleEnum::STATE_COORDINATOR->value,
+            RoleEnum::ZONAL_COORDINATOR->value,
+            RoleEnum::LGA_COORDINATOR->value,
+            RoleEnum::WARD_COORDINATOR->value,
         ]);
     }
 
     /**
-     * Can update if within jurisdiction (Governor and USER cannot update).
+     * Update CVR
      */
     public function update(User $user, Cvr $cvr): bool
     {
-        if (!in_array($user->role?->name, [
-            Role::SUPER_ADMIN->value,
-            Role::ADMIN->value,
-            Role::STATE_COORDINATOR->value,
-            Role::ZONAL_COORDINATOR->value,
-            Role::LGA_COORDINATOR->value,
-            Role::WARD_COORDINATOR->value,
-        ])) {
+        if (! $this->canManage($user)) {
             return false;
         }
 
@@ -68,57 +60,84 @@ class CvrPolicy
     }
 
     /**
-     * Only super_admin and admin can delete.
+     * Delete CVR
      */
     public function delete(User $user, Cvr $cvr): bool
     {
-        return in_array($user->role?->name, [
-            Role::SUPER_ADMIN->value,
-            Role::ADMIN->value,
+        return $user->hasAnyRole([
+            RoleEnum::SUPER_ADMIN->value,
+            RoleEnum::ADMIN->value,
         ]);
     }
 
     public function restore(User $user, Cvr $cvr): bool
     {
-        return $user->role?->name === Role::SUPER_ADMIN->value;
+        return $user->hasRole(RoleEnum::SUPER_ADMIN->value);
     }
 
     public function forceDelete(User $user, Cvr $cvr): bool
     {
-        return $user->role?->name === Role::SUPER_ADMIN->value;
+        return $user->hasRole(RoleEnum::SUPER_ADMIN->value);
     }
 
-    // ─────────────────────────────────────────────────────
-    // Jurisdiction check — walks up the location tree
-    // ─────────────────────────────────────────────────────
+    /**
+     * Central permission check for editable roles
+     */
+    private function canManage(User $user): bool
+    {
+        return $user->hasAnyRole([
+            RoleEnum::SUPER_ADMIN->value,
+            RoleEnum::ADMIN->value,
+            RoleEnum::STATE_COORDINATOR->value,
+            RoleEnum::ZONAL_COORDINATOR->value,
+            RoleEnum::LGA_COORDINATOR->value,
+            RoleEnum::WARD_COORDINATOR->value,
+        ]);
+    }
+
+    /**
+     * Jurisdiction check (IMPORTANT LOGIC CORE)
+     */
     protected function withinJurisdiction(User $user, Cvr $cvr): bool
     {
-        $role     = $user->role?->name;
-        $locType  = $user->location_type;
-        $locId    = $user->location_id;
-        $pu       = $cvr->pu;
+        $pu = $cvr->pu;
 
-        if (!$pu) return false;
+        if (! $pu) {
+            return false;
+        }
 
-        return match ($role) {
-            Role::SUPER_ADMIN->value,
-            Role::ADMIN->value,
-            Role::GOVERNOR->value    => true,
+        // SUPER ADMIN / ADMIN always allowed
+        if ($user->hasAnyRole([
+            RoleEnum::SUPER_ADMIN->value,
+            RoleEnum::ADMIN->value,
+        ])) {
+            return true;
+        }
 
-            // State coordinator — CVR's PU must be under their state
-            Role::STATE_COORDINATOR->value => $locType === 'state'
+        // GOVERNOR sees all below admin level
+        if ($user->hasRole(RoleEnum::GOVERNOR->value)) {
+            return true;
+        }
+
+        $locType = $user->location_type;
+        $locId   = $user->location_id;
+
+        return match ($user->getRoleNames()->first()) {
+
+            RoleEnum::STATE_COORDINATOR->value =>
+                $locType === 'state'
                 && $pu->ward?->lga?->zone?->state_id === $locId,
 
-            // Zonal coordinator — CVR's PU must be under their zone
-            Role::ZONAL_COORDINATOR->value => $locType === 'zone'
+            RoleEnum::ZONAL_COORDINATOR->value =>
+                $locType === 'zone'
                 && $pu->ward?->lga?->zone_id === $locId,
 
-            // LGA coordinator — CVR's PU must be under their LGA
-            Role::LGA_COORDINATOR->value => $locType === 'lga'
+            RoleEnum::LGA_COORDINATOR->value =>
+                $locType === 'lga'
                 && $pu->ward?->lga_id === $locId,
 
-            // Ward coordinator — CVR's PU must be under their ward
-            Role::WARD_COORDINATOR->value => $locType === 'ward'
+            RoleEnum::WARD_COORDINATOR->value =>
+                $locType === 'ward'
                 && $pu->ward_id === $locId,
 
             default => false,

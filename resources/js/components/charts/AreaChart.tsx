@@ -20,7 +20,7 @@ export function AreaChart() {
     const { ref, ready } = useChart();
 
     return (
-        <Card className="flex flex-col w-full min-w-0">
+        <Card className="flex flex-col w-full min-w-0 h-full">
             <CardHeader className="pb-2">
                 <CardTitle style={{ fontFamily: "'Syne', sans-serif", fontSize: 15, fontWeight: 700 }}>
                     Weekly Capture Trend
@@ -29,8 +29,10 @@ export function AreaChart() {
                     February – June 2025
                 </CardDescription>
             </CardHeader>
-            <CardContent className="pt-0">
-                <div ref={ref} className="w-full min-w-0 h-[220px] sm:h-[260px]">
+
+            {/* flex-1 makes this grow to fill whatever height the card has */}
+            <CardContent className="pt-0 flex flex-col flex-1 min-h-0">
+                <div ref={ref} className="w-full min-w-0 flex-1 min-h-0">
                     {ready && (
                         <ChartContainer config={chartConfig} className="w-full h-full">
                             <LineChart data={chartData} margin={{ left: 0, right: 8, top: 16, bottom: 0 }}>

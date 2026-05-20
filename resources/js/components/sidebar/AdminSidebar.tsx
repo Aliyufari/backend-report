@@ -32,7 +32,7 @@ const AdminSideNavLinks = () => {
         },
         {
             name: "Election Countdown",
-            path: "/elections/countdown",
+            path: "/admin/countdown",
             compare: url.startsWith("/elections/countdown"),
             icon: <CalendarClock size={16} />,
             excludes: [] as string[],

@@ -13,6 +13,9 @@
     'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
     'Noto Color Emoji';
 
+  --font-syne: "Syne", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "DM Mono", ui-monospace, monospace;
+
   --animate-fade-in:  umFadeIn 0.15s ease;
   --animate-slide-up: umSlideUp 0.2s ease;
 
@@ -195,6 +198,14 @@ body {
   select {
     @apply bg-white text-gray-900 placeholder:text-gray-400
            dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder:text-zinc-500;
+  }
+
+  .font-syne {
+    font-family: var(--font-syne);
+  }
+
+  .font-mono {
+    font-family: var(--font-mono);
   }
 }
 
