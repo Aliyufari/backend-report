@@ -2,15 +2,24 @@ import { useEffect, useRef, useState } from "react";
 import { useForm } from "@inertiajs/react";
 import { X, Camera, Loader, Eye, EyeOff } from "lucide-react";
 import { toast } from "react-toastify";
-import users from "@/routes/users";
+import users from "@/routes/admin/users";
 import Portal from "@/components/Portal";
 
-interface Role  { id: number; name: string; }
-interface Pu    { id: string; name: string; number?: string; }
-interface Ward  { id: string; name: string; pus:   Pu[];   }
-interface Lga   { id: string; name: string; wards: Ward[]; }
-interface Zone  { id: string; name: string; lgas:  Lga[];  }
-interface State { id: string; name: string; zones: Zone[]; }
+interface Role { id: number; name: string; }
+interface PuOption { id: string; name: string; number?: string; }
+
+interface LocationNode {
+    id: string;
+    name: string;
+    zones?: LocationNode[];
+    lgas?: LocationNode[];
+    wards?: LocationNode[];
+    pus?: PuOption[];
+    [key: string]: unknown;
+}
+
+type LocationScope = "state" | "zone" | "lga" | "ward";
+type LocationLevel = "state" | "zone" | "lga" | "ward" | "pu";
 
 interface User {
     id: string;
@@ -23,19 +32,27 @@ interface User {
 }
 
 interface Props {
-    open:    boolean;
-    onClose: () => void;
-    roles:   Role[];
-    states:  State[];
-    user?:   User | null;
+    open:          boolean;
+    onClose:       () => void;
+    roles:         Role[];
+    locations:     LocationNode[];
+    locationScope: LocationScope;
+    user?:         User | null;
 }
 
-const LOCATION_TYPES = [
-    { value: "state", label: "State"        },
-    { value: "zone",  label: "Zone"         },
-    { value: "lga",   label: "LGA"          },
-    { value: "ward",  label: "Ward"         },
-    { value: "pu",    label: "Polling Unit" },
+const LEVELS: LocationLevel[] = ["state", "zone", "lga", "ward", "pu"];
+const LEVEL_LABELS: Record<LocationLevel, string> = {
+    state: "State", zone: "Zone", lga: "LGA", ward: "Ward", pu: "Polling Unit",
+};
+
+// Cascading chain definition — each entry is a selectable dropdown level
+// (excluding "pu", which is handled by a dedicated final picker sourced
+// from the last chain level's `pus` array, same pattern as CvrModal).
+const CHAIN_DEFS: { level: LocationLevel; childKey: string }[] = [
+    { level: "state", childKey: "zones" },
+    { level: "zone",  childKey: "lgas"  },
+    { level: "lga",   childKey: "wards" },
+    { level: "ward",  childKey: "pus"   },
 ];
 
 // ── Reusable field primitives ─────────────────────────────────────────────────
@@ -83,24 +100,25 @@ function Select({ error, children, ...props }: React.SelectHTMLAttributes<HTMLSe
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function UserModal({ open, onClose, roles, states, user }: Props) {
+export default function UserModal({ open, onClose, roles, locations, locationScope, user }: Props) {
     const isEdit    = !!user;
     const avatarRef = useRef<HTMLInputElement>(null);
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
     const [showPassword, setShowPassword]   = useState(false);
 
-    const [selState, setSelState] = useState<State | null>(null);
-    const [selZone,  setSelZone]  = useState<Zone  | null>(null);
-    const [selLga,   setSelLga]   = useState<Lga   | null>(null);
-    const [selWard,  setSelWard]  = useState<Ward  | null>(null);
+    const scopeIndex   = LEVELS.indexOf(locationScope);       // 0..3
+    const chain         = CHAIN_DEFS.slice(scopeIndex);       // dropdown levels available, from scope down to "ward"
+    const availableTypes = LEVELS.slice(scopeIndex);          // e.g. ward -> ["ward","pu"]
+
+    const [selected, setSelected] = useState<(LocationNode | null)[]>(() => chain.map(() => null));
 
     const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
-        name:          user?.name                 ?? "",
+        name:          user?.name                ?? "",
         email:         user?.email                ?? "",
         password:      "",
         role_id:       user?.role?.id?.toString() ?? "",
         avatar:        null as File | null,
-        location_type: user?.location_type        ?? "",
+        location_type: (user?.location_type as LocationLevel) ?? "",
         location_id:   user?.location_id          ?? "",
     });
 
@@ -109,7 +127,11 @@ export default function UserModal({ open, onClose, roles, states, user }: Props)
         clearErrors();
         setAvatarPreview(null);
         setShowPassword(false);
-        setSelState(null); setSelZone(null); setSelLga(null); setSelWard(null);
+
+        const initial = chain.map(() => null as LocationNode | null);
+        // Scoped roles typically have a single root location — preselect it.
+        if (locations.length === 1) initial[0] = locations[0];
+        setSelected(initial);
 
         if (user) {
             setData({
@@ -118,7 +140,7 @@ export default function UserModal({ open, onClose, roles, states, user }: Props)
                 password:      "",
                 role_id:       user.role?.id?.toString() ?? "",
                 avatar:        null,
-                location_type: user.location_type ?? "",
+                location_type: (user.location_type as LocationLevel) ?? "",
                 location_id:   user.location_id   ?? "",
             });
         } else {
@@ -128,43 +150,44 @@ export default function UserModal({ open, onClose, roles, states, user }: Props)
 
     // ── Location cascade ──────────────────────────────────────────────────────
 
+    const locType = data.location_type as LocationLevel | "";
+
     const handleLocationType = (type: string) => {
-        setData({ ...data, location_type: type, location_id: "" });
-        setSelState(null); setSelZone(null); setSelLga(null); setSelWard(null);
+        setData({ ...data, location_type: type as LocationLevel, location_id: "" });
+        setSelected(chain.map(() => null));
     };
 
-    const handleStateSelect = (id: string) => {
-        const s = states.find(x => x.id === id) ?? null;
-        setSelState(s); setSelZone(null); setSelLga(null); setSelWard(null);
-        setData("location_id", data.location_type === "state" ? id : "");
+    const targetChainIndex = locType === "pu"
+        ? chain.length - 1
+        : chain.findIndex(c => c.level === locType);
+
+    const handleSelect = (levelIndex: number, node: LocationNode | null) => {
+        setSelected(prev => {
+            const next = [...prev];
+            next[levelIndex] = node;
+            for (let i = levelIndex + 1; i < next.length; i++) next[i] = null;
+            return next;
+        });
+
+        if (locType !== "pu" && levelIndex === targetChainIndex) {
+            setData("location_id", node?.id ?? "");
+        } else {
+            setData("location_id", "");
+        }
     };
 
-    const handleZoneSelect = (id: string) => {
-        const z = selState?.zones.find(x => x.id === id) ?? null;
-        setSelZone(z); setSelLga(null); setSelWard(null);
-        setData("location_id", data.location_type === "zone" ? id : "");
+    const optionsForLevel = (levelIndex: number): LocationNode[] => {
+        if (levelIndex === 0) return locations;
+        const parent = selected[levelIndex - 1];
+        if (!parent) return [];
+        const key = chain[levelIndex - 1].childKey;
+        return (parent[key] as LocationNode[] | undefined) ?? [];
     };
 
-    const handleLgaSelect = (id: string) => {
-        const l = selZone?.lgas.find(x => x.id === id) ?? null;
-        setSelLga(l); setSelWard(null);
-        setData("location_id", data.location_type === "lga" ? id : "");
-    };
-
-    const handleWardSelect = (id: string) => {
-        const w = selLga?.wards.find(x => x.id === id) ?? null;
-        setSelWard(w);
-        setData("location_id", data.location_type === "ward" ? id : "");
-    };
+    const lastChainNode = selected[chain.length - 1];
+    const puOptions: PuOption[] = lastChainNode ? (lastChainNode.pus ?? []) : [];
 
     const handlePuSelect = (id: string) => setData("location_id", id);
-
-    const locType   = data.location_type;
-    const showState = !!locType;
-    const showZone  = showState && !!selState && ["zone","lga","ward","pu"].includes(locType);
-    const showLga   = showZone  && !!selZone  && ["lga","ward","pu"].includes(locType);
-    const showWard  = showLga   && !!selLga   && ["ward","pu"].includes(locType);
-    const showPu    = showWard  && !!selWard  && locType === "pu";
 
     // ── Avatar ────────────────────────────────────────────────────────────────
 
@@ -180,7 +203,7 @@ export default function UserModal({ open, onClose, roles, states, user }: Props)
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        const opts = { forceFormData: true, onSuccess: () => onClose(), onError: () => {} };
+        const opts = { forceFormData: true, onSuccess: () => onClose(), preserveScroll: true };
         isEdit
             ? post(users.update.url(user!.id, { query: { _method: "PUT" } }), opts)
             : post(users.store().url, opts);
@@ -213,6 +236,15 @@ export default function UserModal({ open, onClose, roles, states, user }: Props)
                     </div>
 
                     <form onSubmit={handleSubmit} className="px-6 py-5 space-y-6">
+
+                        {/* General error banner */}
+                        {errors.general && (
+                            <div className="px-3 py-2.5 rounded-lg text-[12px] font-['DM_Mono',monospace]
+                                bg-[color-mix(in_oklch,var(--destructive)_10%,transparent)]
+                                border border-[color-mix(in_oklch,var(--destructive)_30%,transparent)] text-destructive">
+                                {errors.general}
+                            </div>
+                        )}
 
                         {/* Avatar */}
                         <div className="flex items-center gap-4">
@@ -315,75 +347,51 @@ export default function UserModal({ open, onClose, roles, states, user }: Props)
 
                                 <div>
                                     <Label>Location Level <span className="text-destructive">*</span></Label>
-                                    <Select error={errors.location_type} value={data.location_type}
+                                    <Select error={errors.location_type} value={locType}
                                         onChange={e => handleLocationType(e.target.value)}>
                                         <option value="">Select level</option>
-                                        {LOCATION_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                                        {availableTypes.map(t => (
+                                            <option key={t} value={t}>{LEVEL_LABELS[t]}</option>
+                                        ))}
                                     </Select>
                                     <FieldError message={errors.location_type} />
                                 </div>
 
-                                {showState && (
-                                    <div>
-                                        <Label>State <span className="text-destructive">*</span></Label>
-                                        <Select error={locType === "state" ? errors.location_id : undefined}
-                                            value={selState?.id ?? ""} onChange={e => handleStateSelect(e.target.value)}>
-                                            <option value="">Select state</option>
-                                            {states.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                        </Select>
-                                        {locType === "state" && <FieldError message={errors.location_id} />}
-                                    </div>
-                                )}
+                                {chain.map((def, idx) => {
+                                    if (targetChainIndex < 0 || idx > targetChainIndex) return null;
+                                    if (idx > 0 && !selected[idx - 1]) return null;
 
-                                {showZone && (
-                                    <div>
-                                        <Label>Zone <span className="text-destructive">*</span></Label>
-                                        <Select error={locType === "zone" ? errors.location_id : undefined}
-                                            value={selZone?.id ?? ""} onChange={e => handleZoneSelect(e.target.value)}>
-                                            <option value="">Select zone</option>
-                                            {selState?.zones.map(z => <option key={z.id} value={z.id}>{z.name}</option>)}
-                                        </Select>
-                                        {locType === "zone" && <FieldError message={errors.location_id} />}
-                                    </div>
-                                )}
+                                    const opts = optionsForLevel(idx);
 
-                                {showLga && (
-                                    <div>
-                                        <Label>LGA <span className="text-destructive">*</span></Label>
-                                        <Select error={locType === "lga" ? errors.location_id : undefined}
-                                            value={selLga?.id ?? ""} onChange={e => handleLgaSelect(e.target.value)}>
-                                            <option value="">Select LGA</option>
-                                            {selZone?.lgas.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-                                        </Select>
-                                        {locType === "lga" && <FieldError message={errors.location_id} />}
-                                    </div>
-                                )}
+                                    return (
+                                        <div key={def.level}>
+                                            <Label>{LEVEL_LABELS[def.level]} <span className="text-destructive">*</span></Label>
+                                            <Select
+                                                error={locType === def.level ? errors.location_id : undefined}
+                                                value={selected[idx]?.id ?? ""}
+                                                onChange={e => handleSelect(idx, opts.find(o => o.id === e.target.value) ?? null)}
+                                            >
+                                                <option value="">Select {LEVEL_LABELS[def.level].toLowerCase()}</option>
+                                                {opts.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+                                            </Select>
+                                            {locType === def.level && <FieldError message={errors.location_id} />}
+                                        </div>
+                                    );
+                                })}
 
-                                {showWard && (
-                                    <div>
-                                        <Label>Ward <span className="text-destructive">*</span></Label>
-                                        <Select error={locType === "ward" ? errors.location_id : undefined}
-                                            value={selWard?.id ?? ""} onChange={e => handleWardSelect(e.target.value)}>
-                                            <option value="">Select ward</option>
-                                            {selLga?.wards.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-                                        </Select>
-                                        {locType === "ward" && <FieldError message={errors.location_id} />}
-                                    </div>
-                                )}
-
-                                {showPu && (
+                                {locType === "pu" && lastChainNode && (
                                     <div>
                                         <Label>Polling Unit <span className="text-destructive">*</span></Label>
-                                        <Select error={locType === "pu" ? errors.location_id : undefined}
-                                            value={data.location_id} onChange={e => handlePuSelect(e.target.value)}>
+                                        <Select error={errors.location_id} value={data.location_id}
+                                            onChange={e => handlePuSelect(e.target.value)}>
                                             <option value="">Select polling unit</option>
-                                            {selWard?.pus.map(p => (
+                                            {puOptions.map(p => (
                                                 <option key={p.id} value={p.id}>
                                                     {p.number ? `${p.number} — ` : ""}{p.name}
                                                 </option>
                                             ))}
                                         </Select>
-                                        {locType === "pu" && <FieldError message={errors.location_id} />}
+                                        <FieldError message={errors.location_id} />
                                     </div>
                                 )}
                             </div>
@@ -393,7 +401,7 @@ export default function UserModal({ open, onClose, roles, states, user }: Props)
                                     text-primary
                                     bg-[color-mix(in_oklch,var(--primary)_8%,transparent)]
                                     border border-[color-mix(in_oklch,var(--primary)_20%,transparent)]">
-                                    ✓ Location assigned: <strong>{LOCATION_TYPES.find(t => t.value === data.location_type)?.label}</strong>
+                                    ✓ Location assigned: <strong>{LEVEL_LABELS[locType as LocationLevel]}</strong>
                                 </div>
                             )}
                         </div>

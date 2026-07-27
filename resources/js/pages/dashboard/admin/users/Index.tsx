@@ -8,21 +8,36 @@ import AdminSidebar from "@/components/sidebar/AdminSidebar";
 import UserModal from "./UserModal";
 import DeleteUserModal from "./DeleteUserModal";
 import DataTable from "@/components/ui/DataTable";
-import users from "@/routes/users";
-import { Role, User, State, Paginated } from "@/types";
+import users from "@/routes/admin/users";
+import { Role, User, Paginated } from "@/types";
+
+interface PuOption { id: string; name: string; number?: string; }
+
+interface LocationNode {
+    id: string;
+    name: string;
+    zones?: LocationNode[];
+    lgas?: LocationNode[];
+    wards?: LocationNode[];
+    pus?: PuOption[];
+    [key: string]: unknown;
+}
+
+type LocationScope = "state" | "zone" | "lga" | "ward";
 
 interface PageProps {
     users: Paginated<User>;
     roles: Role[];
     filters: { search?: string; role?: string };
-    states: State[];
+    locations: LocationNode[];
+    locationScope: LocationScope;
     flash?: { status?: boolean; message?: string };
     [key: string]: unknown;
 }
 
 export default function UsersIndex() {
     const { props } = usePage<PageProps>();
-    const { users: usersData, roles, states, filters, flash } = props;
+    const { users: usersData, roles, locations, locationScope, filters, flash } = props;
 
     const [showModal,  setShowModal]  = useState(false);
     const [editUser,   setEditUser]   = useState<User | null>(null);
@@ -178,7 +193,8 @@ export default function UsersIndex() {
                     open={showModal}
                     onClose={() => setShowModal(false)}
                     roles={roles}
-                    states={states}
+                    locations={locations}
+                    locationScope={locationScope}
                     user={editUser}
                 />
                 <DeleteUserModal

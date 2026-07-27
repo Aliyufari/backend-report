@@ -13,8 +13,8 @@ interface PageProps {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const ELECTION_DATE = new Date("2027-02-27T00:00:00");
-const PROGRESS_START = new Date("2023-02-25T00:00:00");
+const ELECTION_DATE = new Date("2027-01-16T00:00:00");
+const PROGRESS_START = new Date("2023-01-10T00:00:00");
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -107,7 +107,7 @@ function ElectionProgress() {
     return (
         <div className="space-y-1.5">
             <div className="flex justify-between text-xs text-muted-foreground">
-                <span>Feb 25, 2023</span>
+                <span>Jan 25, 2023</span>
                 <span>{pct.toFixed(1)}% elapsed</span>
             </div>
 
@@ -120,7 +120,7 @@ function ElectionProgress() {
 
             <div className="flex justify-between text-xs text-muted-foreground">
                 <span />
-                <span>Feb 27, 2027</span>
+                <span>Jan 16, 2027</span>
             </div>
         </div>
     );
@@ -204,7 +204,7 @@ export default function CountdownIndex() {
                                 Election day has arrived!
                             </p>
                             <p className="text-sm text-emerald-600">
-                                27 February 2027 — Go out and vote.
+                                16 January 2027 — Go out and vote.
                             </p>
                         </div>
                     )}
@@ -221,7 +221,7 @@ export default function CountdownIndex() {
 
                         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-muted border">
                             <CalendarCheck size={13} />
-                            <span>Target: 27 Feb 2027</span>
+                            <span>Target: 16 Jan 2027</span>
                         </div>
                     </div>
 

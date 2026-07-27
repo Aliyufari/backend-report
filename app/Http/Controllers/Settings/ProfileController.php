@@ -3,61 +3,71 @@
 namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Settings\ProfileUpdateRequest;
-use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Illuminate\Http\RedirectResponse;
+use App\Http\Requests\UpdateProfileEmailRequest;
+use App\Http\Requests\UpdateProfileInfoRequest;
+use App\Http\Requests\UpdateProfilePasswordRequest;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class ProfileController extends Controller
 {
-    /**
-     * Show the user's profile settings page.
-     */
-    public function edit(Request $request): Response
+    public function index(Request $request): Response
     {
-        return Inertia::render('settings/profile', [
-            'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
-            'status' => $request->session()->get('status'),
+        return Inertia::render('dashboard/profile/Index', [
+            'profile' => $request->user()->load('roles'),
         ]);
     }
 
-    /**
-     * Update the user's profile settings.
-     */
-    public function update(ProfileUpdateRequest $request): RedirectResponse
+    public function updateInfo(UpdateProfileInfoRequest $request)
     {
-        $request->user()->fill($request->validated());
+        try {
+            $user = $request->user();
+            $data = $request->validated();
 
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
+            if ($request->hasFile('avatar')) {
+                if ($user->avatar) {
+                    Storage::disk('public')->delete($user->avatar);
+                }
+                $data['avatar'] = $request->file('avatar')->store('avatars', 'public');
+            }
+
+            $user->update($data);
+
+            return back()->with(['status' => true, 'message' => 'Profile updated successfully.']);
+        } catch (\Throwable $e) {
+            Log::error('Failed to update profile info', ['message' => $e->getMessage(), 'user_id' => $request->user()->id]);
+
+            return back()->withErrors(['general' => 'Failed to update profile.']);
         }
-
-        $request->user()->save();
-
-        return to_route('profile.edit');
     }
 
-    /**
-     * Delete the user's account.
-     */
-    public function destroy(Request $request): RedirectResponse
+    public function updateEmail(UpdateProfileEmailRequest $request)
     {
-        $request->validate([
-            'password' => ['required', 'current_password'],
-        ]);
+        try {
+            $request->user()->update(['email' => $request->validated('email')]);
 
-        $user = $request->user();
+            return back()->with(['status' => true, 'message' => 'Email updated successfully.']);
+        } catch (\Throwable $e) {
+            Log::error('Failed to update email', ['message' => $e->getMessage(), 'user_id' => $request->user()->id]);
 
-        Auth::logout();
+            return back()->withErrors(['general' => 'Failed to update email.']);
+        }
+    }
 
-        $user->delete();
+    public function updatePassword(UpdateProfilePasswordRequest $request)
+    {
+        try {
+            $request->user()->update(['password' => Hash::make($request->validated('password'))]);
 
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+            return back()->with(['status' => true, 'message' => 'Password updated successfully.']);
+        } catch (\Throwable $e) {
+            Log::error('Failed to update password', ['message' => $e->getMessage(), 'user_id' => $request->user()->id]);
 
-        return redirect('/');
+            return back()->withErrors(['general' => 'Failed to update password.']);
+        }
     }
 }

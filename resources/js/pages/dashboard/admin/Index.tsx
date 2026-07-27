@@ -9,7 +9,7 @@ export default function Admin() {
             <Head title="Admin Dashboard" />
             <AppLayout
                 SideNavigation={AdminSidebar}
-                title="Governor's Dashboard"
+                title="Admin Dashboard"
                 sub="CROSS RIVER STATE · INEC VOTER REGISTRATION MONITOR"
                 live
             >

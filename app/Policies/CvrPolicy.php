@@ -100,47 +100,6 @@ class CvrPolicy
      */
     protected function withinJurisdiction(User $user, Cvr $cvr): bool
     {
-        $pu = $cvr->pu;
-
-        if (! $pu) {
-            return false;
-        }
-
-        // SUPER ADMIN / ADMIN always allowed
-        if ($user->hasAnyRole([
-            RoleEnum::SUPER_ADMIN->value,
-            RoleEnum::ADMIN->value,
-        ])) {
-            return true;
-        }
-
-        // GOVERNOR sees all below admin level
-        if ($user->hasRole(RoleEnum::GOVERNOR->value)) {
-            return true;
-        }
-
-        $locType = $user->location_type;
-        $locId   = $user->location_id;
-
-        return match ($user->getRoleNames()->first()) {
-
-            RoleEnum::STATE_COORDINATOR->value =>
-                $locType === 'state'
-                && $pu->ward?->lga?->zone?->state_id === $locId,
-
-            RoleEnum::ZONAL_COORDINATOR->value =>
-                $locType === 'zone'
-                && $pu->ward?->lga?->zone_id === $locId,
-
-            RoleEnum::LGA_COORDINATOR->value =>
-                $locType === 'lga'
-                && $pu->ward?->lga_id === $locId,
-
-            RoleEnum::WARD_COORDINATOR->value =>
-                $locType === 'ward'
-                && $pu->ward_id === $locId,
-
-            default => false,
-        };
+        return $cvr->pu ? $cvr->pu->isWithinJurisdictionOf($user) : false;
     }
 }

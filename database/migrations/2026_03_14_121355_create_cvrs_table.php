@@ -15,7 +15,7 @@ return new class extends Migration
     {
         Schema::create('cvrs', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->string('unique_id')->nullable()->unique();
+            $table->string('unique_id')->unique();
             $table->string('type')->nullable();
             $table->string('status')->nullable();
             $table->foreignIdFor(Pu::class, 'pu_id')->nullable();

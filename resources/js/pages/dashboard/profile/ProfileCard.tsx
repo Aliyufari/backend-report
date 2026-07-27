@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { useForm } from "@inertiajs/react";
 import { Camera, Pencil, X, Loader2, CircleUser } from "lucide-react";
 import { toast } from "react-toastify";
-import profile from "@/routes/profile";
+import profile from "@/routes/settings/profile";
 import Portal from "@/components/Portal";
 
 interface Role    { id: string; name: string; }

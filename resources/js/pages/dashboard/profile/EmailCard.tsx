@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm } from "@inertiajs/react";
 import { Pencil, X, Loader2, Mail } from "lucide-react";
-import profile from "@/routes/profile";
+import profile from "@/routes/settings/profile";
 import Portal from "@/components/Portal";
 
 function Label({ children }: { children: React.ReactNode }) {

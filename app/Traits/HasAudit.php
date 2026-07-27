@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 trait HasAudit
 {
-    protected static function bootHasAudit()
+    protected static function bootHasAudit(): void
     {
         static::creating(function ($model) {
             if (auth()->check()) {

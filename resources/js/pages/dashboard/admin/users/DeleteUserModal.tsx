@@ -1,7 +1,7 @@
 import { useForm } from "@inertiajs/react";
 import { Loader2, Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
-import users from "@/routes/users";
+import users from "@/routes/admin/users";
 import Portal from "@/components/Portal";
 
 interface User {
@@ -16,13 +16,15 @@ interface Props {
 }
 
 export default function DeleteUserModal({ open, onClose, user }: Props) {
-    const { delete: destroy, processing } = useForm({});
+    const { delete: destroy, processing, errors } = useForm({});
 
     const handleDelete = () => {
         if (!user) return;
         destroy(users.destroy(user.id).url, {
             onSuccess: () => onClose(),
-            onError:   () => {},
+            onError: () => {
+                toast.error(errors.general ?? "Failed to delete user. Please try again.");
+            },
         });
     };
 

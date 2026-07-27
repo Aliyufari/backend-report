@@ -1,9 +1,10 @@
-import { AlignJustify, ChevronDown, LogOut, Settings, User } from "lucide-react";
+import { AlignJustify, ChevronDown, LogOut, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, usePage, router } from "@inertiajs/react";
 import Spinner from "@/pages/components/Spinner";
 import MobileNavigation from "@/components/navigations/MobileNavigation";
 import logo from "@/assets/images/logo.png";
+import profile from "@/routes/settings/profile";
 
 interface AuthUser {
     id: number;
@@ -131,18 +132,11 @@ export default function HeaderNavigation() {
                             {/* Links */}
                             <div className="p-2 space-y-0.5">
                                 <Link
-                                    href="/admin/profile"
+                                    href={profile.index().url}
                                     className="flex items-center gap-2.5 text-[13px] px-3 py-2 rounded-md text-foreground transition-all duration-150 hover:bg-accent hover:pl-4"
                                 >
                                     <User size={14} className="text-muted-foreground shrink-0" />
                                     <span>My Profile</span>
-                                </Link>
-                                <Link
-                                    href="/dashboard/settings"
-                                    className="flex items-center gap-2.5 text-[13px] px-3 py-2 rounded-md text-foreground transition-all duration-150 hover:bg-accent hover:pl-4"
-                                >
-                                    <Settings size={14} className="text-muted-foreground shrink-0" />
-                                    <span>Settings</span>
                                 </Link>
                             </div>
 

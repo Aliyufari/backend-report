@@ -1,5 +1,7 @@
 import { useEffect, type JSX } from "react";
 import AdminSidebar from "../sidebar/AdminSidebar";
+import GovernorSidebar from "../sidebar/GovernorSidebar";
+import CoordinatorSidebar from "../sidebar/CoordinatorSidebar";
 import useRole from "@/hooks/auth/useRole";
 import type { Roles } from "@/types";
 import logo from "@/assets/images/logo.png";
@@ -15,7 +17,11 @@ export default function MobileNavigation({ showMobile, onClose }: MobileProps) {
     const navLinks: Record<Roles, JSX.Element> = {
         super_admin: <AdminSidebar />,
         admin: <AdminSidebar />,
-        governor: <AdminSidebar />,
+        governor: <GovernorSidebar />,
+        zonal_coordinator: <CoordinatorSidebar />,
+        state_coordinator: <CoordinatorSidebar />,
+        lga_coordinator: <CoordinatorSidebar />,
+        ward_coordinator: <CoordinatorSidebar />,
     };
 
     useEffect(() => {

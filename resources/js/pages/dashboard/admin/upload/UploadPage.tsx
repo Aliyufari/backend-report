@@ -3,7 +3,7 @@ import { usePage } from "@inertiajs/react";
 import { toast } from "react-toastify";
 import { Upload, FileSpreadsheet, X, CheckCircle2, AlertCircle, Loader } from "lucide-react";
 import { echo } from "@/echo";
-import upload from "@/routes/upload";
+import upload from "@/routes/admin/upload";
 
 type UploadStatus = "pending" | "processing" | "done" | "failed";
 

@@ -2,65 +2,51 @@
 
 namespace App\Policies;
 
+use App\Enums\Role as RoleEnum;
 use App\Models\Accreditation;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
 
 class AccreditationPolicy
 {
-    /**
-     * Determine whether the user can view any models.
-     */
     public function viewAny(User $user): bool
     {
-        return false;
+        return $user->hasAnyRole([
+            RoleEnum::SUPER_ADMIN->value,
+            RoleEnum::ADMIN->value,
+            RoleEnum::GOVERNOR->value,
+            RoleEnum::STATE_COORDINATOR->value,
+            RoleEnum::ZONAL_COORDINATOR->value,
+            RoleEnum::LGA_COORDINATOR->value,
+            RoleEnum::WARD_COORDINATOR->value,
+        ]);
     }
 
-    /**
-     * Determine whether the user can view the model.
-     */
     public function view(User $user, Accreditation $accreditation): bool
     {
-        return false;
+        return $this->withinJurisdiction($user, $accreditation);
     }
 
-    /**
-     * Determine whether the user can create models.
-     */
     public function create(User $user): bool
     {
-        return false;
+        return $user->hasAnyRole([RoleEnum::SUPER_ADMIN->value, RoleEnum::ADMIN->value]);
     }
 
-    /**
-     * Determine whether the user can update the model.
-     */
     public function update(User $user, Accreditation $accreditation): bool
     {
-        return false;
+        if (! $user->hasAnyRole([RoleEnum::SUPER_ADMIN->value, RoleEnum::ADMIN->value])) {
+            return false;
+        }
+
+        return $this->withinJurisdiction($user, $accreditation);
     }
 
-    /**
-     * Determine whether the user can delete the model.
-     */
     public function delete(User $user, Accreditation $accreditation): bool
     {
-        return false;
+        return $user->hasAnyRole([RoleEnum::SUPER_ADMIN->value, RoleEnum::ADMIN->value]);
     }
 
-    /**
-     * Determine whether the user can restore the model.
-     */
-    public function restore(User $user, Accreditation $accreditation): bool
+    protected function withinJurisdiction(User $user, Accreditation $accreditation): bool
     {
-        return false;
-    }
-
-    /**
-     * Determine whether the user can permanently delete the model.
-     */
-    public function forceDelete(User $user, Accreditation $accreditation): bool
-    {
-        return false;
+        return $accreditation->pu ? $accreditation->pu->isWithinJurisdictionOf($user) : false;
     }
 }

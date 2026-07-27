@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\CvrStatus;
 use App\Enums\CvrType;
 use App\Enums\Role;
+use App\Enums\Location as LocationEnum;
 use App\Traits\HasAudit;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -35,31 +36,22 @@ class Cvr extends Model
 
     public function scopeVisibleTo($query, User $authUser)
     {
-        $role    = $authUser->role?->name;
-        $locType = $authUser->location_type;
+        if ($authUser->hasRole(Role::SUPER_ADMIN->value)) {
+            return $query;
+        }
+
+        if ($authUser->hasRole(Role::ADMIN->value)) {
+            return $query;
+        }
+
+        $locType = $authUser->location_type?->value;
         $locId   = $authUser->location_id;
 
-        return match ($role) {
-            Role::SUPER_ADMIN->value,
-            Role::ADMIN->value,
-            Role::GOVERNOR->value => $query,
-
-            Role::STATE_COORDINATOR->value => $query->whereHas('pu.ward.lga.zone', function ($q) use ($locId) {
-                $q->where('state_id', $locId);
-            }),
-
-            Role::ZONAL_COORDINATOR->value => $query->whereHas('pu.ward.lga', function ($q) use ($locId) {
-                $q->where('zone_id', $locId);
-            }),
-
-            Role::LGA_COORDINATOR->value => $query->whereHas('pu.ward', function ($q) use ($locId) {
-                $q->where('lga_id', $locId);
-            }),
-
-            Role::WARD_COORDINATOR->value => $query->whereHas('pu', function ($q) use ($locId) {
-                $q->where('ward_id', $locId);
-            }),
-
+        return match ($locType) {
+            LocationEnum::STATE->value => $query->whereHas('pu.ward.lga.zone', fn($q) => $q->where('state_id', $locId)),
+            LocationEnum::ZONE->value  => $query->whereHas('pu.ward.lga', fn($q) => $q->where('zone_id', $locId)),
+            LocationEnum::LGA->value   => $query->whereHas('pu.ward', fn($q) => $q->where('lga_id', $locId)),
+            LocationEnum::WARD->value  => $query->whereHas('pu', fn($q) => $q->where('ward_id', $locId)),
             default => $query->whereRaw('1 = 0'),
         };
     }

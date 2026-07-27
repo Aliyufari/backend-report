@@ -16,7 +16,7 @@ class UserPolicy
             RoleEnum::STATE_COORDINATOR->value,
             RoleEnum::ZONAL_COORDINATOR->value,
             RoleEnum::LGA_COORDINATOR->value,
-            RoleEnum::WARD_COORDINATOR->value
+            RoleEnum::WARD_COORDINATOR->value,
         ]);
     }
 
@@ -25,15 +25,19 @@ class UserPolicy
         return $authUser->canAccessUser($user);
     }
 
+    /**
+     * Class-level check only — "can this role ever create users at all."
+     * The specific role + location being assigned is validated separately
+     * via canCreateRole()/canAssignLocation() once the target is known.
+     */
     public function create(User $authUser): bool
     {
         return $authUser->hasAnyRole([
             RoleEnum::SUPER_ADMIN->value,
             RoleEnum::ADMIN->value,
-            RoleEnum::GOVERNOR->value,
             RoleEnum::STATE_COORDINATOR->value,
             RoleEnum::ZONAL_COORDINATOR->value,
-            RoleEnum::LGA_COORDINATOR->value
+            RoleEnum::LGA_COORDINATOR->value,
         ]);
     }
 
