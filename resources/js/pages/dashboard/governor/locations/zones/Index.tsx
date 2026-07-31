@@ -1,9 +1,9 @@
-// resources/js/pages/dashboard/governor/locations/zones/Index.tsx
 import { usePage, Head } from "@inertiajs/react";
 import { Layers } from "lucide-react";
 import AppLayout from "@/layouts/AppLayout";
 import GovernorSidebar from "@/components/sidebar/GovernorSidebar";
 import DataTable from "@/components/ui/DataTable";
+import StateLocationStats from "@/components/locations/StateLocationStats";
 
 interface Zone {
     id: string;
@@ -13,15 +13,19 @@ interface Zone {
     created_at: string;
 }
 
+interface Statistics { zones: number; lgas: number; wards: number; pus: number; }
+
 interface PageProps {
     zones: { data: Zone[]; links: unknown[]; meta: Record<string, unknown> };
     filters: { search?: string };
+    stateName?: string | null;
+    statistics: Statistics;
     [key: string]: unknown;
 }
 
 export default function ZonesIndex() {
     const { props } = usePage<PageProps>();
-    const { zones, filters } = props;
+    const { zones, filters, stateName, statistics } = props;
 
     const columns = [
         {
@@ -48,8 +52,15 @@ export default function ZonesIndex() {
 
     return (
         <>
-            <Head title="Zones" />
-            <AppLayout SideNavigation={GovernorSidebar} title="Zones" sub="Senatorial zones in your state" live={false}>
+            <Head title={stateName ? `${stateName} — Zones` : "Zones"} />
+            <AppLayout
+                SideNavigation={GovernorSidebar}
+                title={stateName ? `${stateName} — Zones` : "Zones"}
+                sub="Senatorial zones in your state"
+                live={false}
+            >
+                <StateLocationStats statistics={statistics} />
+
                 <DataTable
                     data={zones} columns={columns as any}
                     indexUrl="/governor/zones"

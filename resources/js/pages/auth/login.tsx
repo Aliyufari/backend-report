@@ -29,21 +29,20 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                 )}
 
                 <Form
-                    {...AuthenticatedSessionController.store.form()}
+                    action={AuthenticatedSessionController.store().url}
+                    method="post"
                     resetOnSuccess={['password']}
                     disableWhileProcessing
                     options={{
                         preserveState: true,
                         preserveScroll: true,
-                        replace: true
+                        replace: true,
                     }}
                     className="flex flex-col gap-5"
-                    onSuccess={() => {
-                        toast.success('Logged in successfully!');
-                    }}
-                    onError={() => {
-                        toast.error('Login failed. Please check your credentials.');
-                    }}
+                    onSuccess={() => toast.success('Logged in successfully!')}
+                    onError={() =>
+                        toast.error('Login failed. Please check your credentials.')
+                    }
                 >
                     {({ processing, errors }) => (
                         <>

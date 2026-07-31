@@ -18,7 +18,7 @@ import {
     ClipboardCheck,
     FileBadge,
     ClipboardList,
-    Users
+    Users,
 } from "lucide-react";
 
 import { dashboard } from "@/routes/admin";
@@ -42,6 +42,7 @@ import { index as users } from "@/routes/admin/users";
 import { index as wards } from "@/routes/admin/wards";
 import { index as zones } from "@/routes/admin/zones";
 import { index as cvrsReport } from "@/routes/admin/cvrs-report";
+import { index as settings } from "@/routes/admin/settings";
 
 
 import SideNavList, { type NavLinkItem } from "./SideNavList";
@@ -148,7 +149,7 @@ const secondary: NavLinkItem[] = [
     },
     {
         name: "Settings",
-        path: staff(),
+        path: settings(),
         icon: <SlidersHorizontal size={16} />,
     }
 ];

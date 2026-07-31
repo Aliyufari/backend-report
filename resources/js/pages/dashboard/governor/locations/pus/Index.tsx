@@ -1,9 +1,9 @@
-// resources/js/pages/dashboard/governor/locations/pus/Index.tsx
 import { usePage, Head } from "@inertiajs/react";
 import { CircleDot } from "lucide-react";
 import AppLayout from "@/layouts/AppLayout";
 import GovernorSidebar from "@/components/sidebar/GovernorSidebar";
 import DataTable from "@/components/ui/DataTable";
+import StateLocationStats from "@/components/locations/StateLocationStats";
 
 interface Ward { id: string; name: string; }
 interface Pu {
@@ -14,16 +14,20 @@ interface Pu {
     created_at: string;
 }
 
+interface Statistics { zones: number; lgas: number; wards: number; pus: number; }
+
 interface PageProps {
     pus: { data: Pu[]; links: unknown[]; meta: Record<string, unknown> };
     wards: Ward[];
     filters: { search?: string; ward_id?: string };
+    stateName?: string | null;
+    statistics: Statistics;
     [key: string]: unknown;
 }
 
 export default function PusIndex() {
     const { props } = usePage<PageProps>();
-    const { pus, wards, filters } = props;
+    const { pus, wards, filters, stateName, statistics } = props;
 
     const columns = [
         {
@@ -61,8 +65,15 @@ export default function PusIndex() {
 
     return (
         <>
-            <Head title="Polling Units" />
-            <AppLayout SideNavigation={GovernorSidebar} title="Polling Units" sub="Polling units in your state" live={false}>
+            <Head title={stateName ? `${stateName} — Polling Units` : "Polling Units"} />
+            <AppLayout
+                SideNavigation={GovernorSidebar}
+                title={stateName ? `${stateName} — Polling Units` : "Polling Units"}
+                sub="Polling units in your state"
+                live={false}
+            >
+                <StateLocationStats statistics={statistics} />
+
                 <DataTable
                     data={pus} columns={columns as any}
                     indexUrl="/governor/pus"

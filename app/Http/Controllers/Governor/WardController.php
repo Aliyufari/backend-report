@@ -4,7 +4,10 @@ namespace App\Http\Controllers\Governor;
 
 use App\Http\Controllers\Controller;
 use App\Models\Lga;
+use App\Models\Pu;
+use App\Models\State;
 use App\Models\Ward;
+use App\Models\Zone;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -34,10 +37,19 @@ class WardController extends Controller
                 ->orderBy('name')
                 ->get();
 
+            $statistics = [
+                'zones' => Zone::where('state_id', $stateId)->count(),
+                'lgas'  => Lga::whereHas('zone', fn ($q) => $q->where('state_id', $stateId))->count(),
+                'wards' => Ward::whereHas('lga.zone', fn ($q) => $q->where('state_id', $stateId))->count(),
+                'pus'   => Pu::whereHas('ward.lga.zone', fn ($q) => $q->where('state_id', $stateId))->count(),
+            ];
+
             return inertia('dashboard/governor/locations/wards/Index', [
-                'wards'   => $wards,
-                'lgas'    => $lgas,
-                'filters' => $request->only(['search', 'lga_id']),
+                'wards'      => $wards,
+                'lgas'       => $lgas,
+                'filters'    => $request->only(['search', 'lga_id']),
+                'stateName'  => optional(State::find($stateId))->name,
+                'statistics' => $statistics,
             ]);
         } catch (\Throwable $e) {
             Log::error('Failed to load wards', ['message' => $e->getMessage(), 'user_id' => $request->user()->id]);

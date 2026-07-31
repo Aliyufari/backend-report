@@ -1,9 +1,9 @@
-// resources/js/pages/dashboard/governor/locations/wards/Index.tsx
 import { usePage, Head } from "@inertiajs/react";
 import { LayoutGrid } from "lucide-react";
 import AppLayout from "@/layouts/AppLayout";
 import GovernorSidebar from "@/components/sidebar/GovernorSidebar";
 import DataTable from "@/components/ui/DataTable";
+import StateLocationStats from "@/components/locations/StateLocationStats";
 
 interface Lga { id: string; name: string; }
 interface Ward {
@@ -14,16 +14,20 @@ interface Ward {
     created_at: string;
 }
 
+interface Statistics { zones: number; lgas: number; wards: number; pus: number; }
+
 interface PageProps {
     wards: { data: Ward[]; links: unknown[]; meta: Record<string, unknown> };
     lgas: Lga[];
     filters: { search?: string; lga_id?: string };
+    stateName?: string | null;
+    statistics: Statistics;
     [key: string]: unknown;
 }
 
 export default function WardsIndex() {
     const { props } = usePage<PageProps>();
-    const { wards, lgas, filters } = props;
+    const { wards, lgas, filters, stateName, statistics } = props;
 
     const columns = [
         {
@@ -56,8 +60,15 @@ export default function WardsIndex() {
 
     return (
         <>
-            <Head title="Wards" />
-            <AppLayout SideNavigation={GovernorSidebar} title="Wards" sub="Electoral wards in your state" live={false}>
+            <Head title={stateName ? `${stateName} — Wards` : "Wards"} />
+            <AppLayout
+                SideNavigation={GovernorSidebar}
+                title={stateName ? `${stateName} — Wards` : "Wards"}
+                sub="Electoral wards in your state"
+                live={false}
+            >
+                <StateLocationStats statistics={statistics} />
+
                 <DataTable
                     data={wards} columns={columns as any}
                     indexUrl="/governor/wards"

@@ -19,12 +19,11 @@ import { index as eos } from "@/routes/governor/eos";
 import { index as cvrsReport } from "@/routes/governor/cvrs-report";
 import { index as accreditations } from "@/routes/governor/accreditations";
 import { index as bivas } from "@/routes/governor/bivas";
-import { index as states } from "@/routes/governor/states";
 import { index as zones } from "@/routes/governor/zones";
 import { index as lgas } from "@/routes/governor/lgas";
 import { index as wards } from "@/routes/governor/wards";
 import { index as pus } from "@/routes/governor/pus";
-// import { index as users } from "@/routes/governor/coordinators";
+import { index as users } from "@/routes/governor/users";
 
 import SideNavList, { type NavLinkItem } from "./SideNavList";
 
@@ -41,11 +40,6 @@ const primary: NavLinkItem[] = [
         icon: <CalendarClock size={16} />,
     },
     {
-        name: "State EOs",
-        path: eos(),
-        icon: <MapPin size={16} />,
-    },
-    {
         name: "CVR Report",
         path: cvrsReport(),
         icon: <IdCard size={16} />,
@@ -60,11 +54,6 @@ const primary: NavLinkItem[] = [
         path: bivas(),
         icon: <Cpu size={16} />,
     },
-    // {
-    //     name: "States",
-    //     path: states(),
-    //     icon: <House size={16} />,
-    // },
     {
         name: "Zones",
         path: zones(),
@@ -85,11 +74,16 @@ const primary: NavLinkItem[] = [
         path: pus(),
         icon: <CircleDot size={16} />,
     },
-    // {
-    //     name: "Coordinators",
-    //     path: users(),
-    //     icon: <UserCog size={16} />,
-    // },
+    {
+        name: "State EOs",
+        path: eos(),
+        icon: <MapPin size={16} />,
+    },
+    {
+        name: "Coordinators",
+        path: users(),
+        icon: <UserCog size={16} />,
+    }
 ];
 
 const secondary: NavLinkItem[] = [];

@@ -18,7 +18,7 @@ export default function Register() {
 
             <AuthLayout title="Register to Get Started" maxWidth="max-w-[500px]">
                 <Form
-                    {...RegisteredUserController.store.form()}
+                    {...RegisteredUserController.store()}
                     resetOnSuccess={['password', 'password_confirmation']}
                     disableWhileProcessing
                     options={{

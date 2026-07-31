@@ -1,9 +1,9 @@
-// resources/js/pages/dashboard/governor/locations/lgas/Index.tsx
 import { usePage, Head } from "@inertiajs/react";
 import { Building2 } from "lucide-react";
 import AppLayout from "@/layouts/AppLayout";
 import GovernorSidebar from "@/components/sidebar/GovernorSidebar";
 import DataTable from "@/components/ui/DataTable";
+import StateLocationStats from "@/components/locations/StateLocationStats";
 
 interface Zone { id: string; name: string; }
 interface Lga {
@@ -14,16 +14,20 @@ interface Lga {
     created_at: string;
 }
 
+interface Statistics { zones: number; lgas: number; wards: number; pus: number; }
+
 interface PageProps {
     lgas: { data: Lga[]; links: unknown[]; meta: Record<string, unknown> };
     zones: Zone[];
     filters: { search?: string; zone_id?: string };
+    stateName?: string | null;
+    statistics: Statistics;
     [key: string]: unknown;
 }
 
 export default function LgasIndex() {
     const { props } = usePage<PageProps>();
-    const { lgas, zones, filters } = props;
+    const { lgas, zones, filters, stateName, statistics } = props;
 
     const columns = [
         {
@@ -56,8 +60,15 @@ export default function LgasIndex() {
 
     return (
         <>
-            <Head title="LGAs" />
-            <AppLayout SideNavigation={GovernorSidebar} title="LGAs" sub="Local government areas in your state" live={false}>
+            <Head title={stateName ? `${stateName} — LGAs` : "LGAs"} />
+            <AppLayout
+                SideNavigation={GovernorSidebar}
+                title={stateName ? `${stateName} — LGAs` : "LGAs"}
+                sub="Local government areas in your state"
+                live={false}
+            >
+                <StateLocationStats statistics={statistics} />
+
                 <DataTable
                     data={lgas} columns={columns as any}
                     indexUrl="/governor/lgas"

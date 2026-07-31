@@ -1,24 +1,7 @@
 <?php
 
-use App\Http\Controllers\Admin\AccreditationReportController;
-use App\Http\Controllers\Admin\BivasController;
-use App\Http\Controllers\Admin\CountdownController;
-use App\Http\Controllers\Admin\CvrController;
-use App\Http\Controllers\Admin\CvrReportController;
-use App\Http\Controllers\Admin\DashboardController;
-use App\Http\Controllers\Admin\ElectionController;
-use App\Http\Controllers\Admin\ElectionReadinessController;
-use App\Http\Controllers\Admin\EoController;
-use App\Http\Controllers\Admin\ExcelUploadController;
-use App\Http\Controllers\Admin\LgaController;
-use App\Http\Controllers\Admin\ManageAccreditationController;
-use App\Http\Controllers\Admin\PuController;
-use App\Http\Controllers\Admin\ResultController;
-use App\Http\Controllers\Admin\StaffController;
-use App\Http\Controllers\Admin\StateController;
-use App\Http\Controllers\Admin\UserController;
-use App\Http\Controllers\Admin\WardController;
-use App\Http\Controllers\Admin\ZoneController;
+use App\Http\Controllers\Admin\{ AccreditationReportController, BivasController, CountdownController, CvrController, CvrReportController, DashboardController, ElectionController, EoController, ExcelUploadController, LgaController, ManageAccreditationController, ProfileController, PuController, ResultController, StaffController, StateController, UserController, WardController, ZoneController };
+use App\Http\Controllers\Admin\SettingController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'role:super_admin|admin'])
@@ -26,42 +9,85 @@ Route::middleware(['auth', 'role:super_admin|admin'])
     ->name('admin.')
     ->group(function () {
 
-        Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+        /*
+        |--------------------------------------------------------------------------
+        | Dashboard
+        |--------------------------------------------------------------------------
+        */
 
-        // ── Users ──────────────────────────────────────────────────────────
-        Route::get('/users', [UserController::class, 'index'])->name('users.index');
-        Route::post('/users', [UserController::class, 'store'])->name('users.store');
-        Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
-        Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+        Route::get('/dashboard', [DashboardController::class, 'index'])
+            ->name('dashboard');
 
-        // ── CVRs ───────────────────────────────────────────────────────────
-        Route::get('/cvrs', [CvrController::class, 'index'])->name('cvrs.index');
-        Route::post('/cvrs', [CvrController::class, 'store'])->name('cvrs.store');
-        Route::put('/cvrs/{cvr}', [CvrController::class, 'update'])->name('cvrs.update');
-        Route::delete('/cvrs/{cvr}', [CvrController::class, 'destroy'])->name('cvrs.destroy');
+        /*
+        |--------------------------------------------------------------------------
+        | Profile
+        |--------------------------------------------------------------------------
+        */
 
-        // ── Location hierarchy ────────────────────────────────────────────
+        Route::prefix('profile')->name('profile.')->group(function () {
+            Route::get('/', [ProfileController::class, 'index'])->name('index');
+            Route::put('/info', [ProfileController::class, 'updateInfo'])->name('info');
+            Route::put('/email', [ProfileController::class, 'updateEmail'])->name('email');
+            Route::put('/password', [ProfileController::class, 'updatePassword'])->name('password');
+        });
+
+        /*
+        |--------------------------------------------------------------------------
+        | Users
+        |--------------------------------------------------------------------------
+        */
+
+        Route::resource('users', UserController::class)
+            ->except(['create', 'edit', 'show']);
+
+        /*
+        |--------------------------------------------------------------------------
+        | CVRs
+        |--------------------------------------------------------------------------
+        */
+
+        Route::resource('cvrs', CvrController::class)
+            ->except(['create', 'edit', 'show']);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Locations
+        |--------------------------------------------------------------------------
+        */
+
         Route::resource('states', StateController::class)->except(['show']);
         Route::resource('zones', ZoneController::class)->except(['show']);
         Route::resource('lgas', LgaController::class)->except(['show']);
         Route::resource('wards', WardController::class)->except(['show']);
         Route::resource('pus', PuController::class)->except(['show']);
 
-        // ── Upload ─────────────────────────────────────────────────────────
-        Route::get('/upload', [ExcelUploadController::class, 'index'])->name('upload.index');
-        Route::post('/upload', [ExcelUploadController::class, 'store'])->name('upload.store');
-        Route::get('/upload/{uploadId}/progress', [ExcelUploadController::class, 'progress'])->name('upload.progress');
+        /*
+        |--------------------------------------------------------------------------
+        | Upload
+        |--------------------------------------------------------------------------
+        */
 
-        // ── Election Countdown ────────────────────────────────────────────
-        Route::get('/countdown', [CountdownController::class, 'index'])->name('countdown.index');
+        Route::controller(ExcelUploadController::class)
+            ->prefix('upload')
+            ->name('upload.')
+            ->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('/', 'store')->name('store');
+                Route::get('{uploadId}/progress', 'progress')->name('progress');
+            });
 
-        // ── Nationwide EOs ─────────────────────────────────────────────────
-        Route::get('/eos', [EoController::class, 'index'])->name('eos.index');
-        Route::post('/eos', [EoController::class, 'store'])->name('eos.store');
-        Route::put('/eos/{eo}', [EoController::class, 'update'])->name('eos.update');
-        Route::delete('/eos/{eo}', [EoController::class, 'destroy'])->name('eos.destroy');
+        /*
+        |--------------------------------------------------------------------------
+        | Reports
+        |--------------------------------------------------------------------------
+        */
 
-        // ── CVR hierarchy report ────────────────────────────────────────────
+        Route::get('/countdown', [CountdownController::class, 'index'])
+            ->name('countdown.index');
+
+        Route::resource('eos', EoController::class)
+            ->only(['index', 'store', 'update', 'destroy']);
+
         Route::prefix('cvrs-report')->name('cvrs-report.')->group(function () {
             Route::get('/', [CvrReportController::class, 'states'])->name('index');
             Route::get('/states/{state}/zones', [CvrReportController::class, 'zones'])->name('zones');
@@ -71,7 +97,6 @@ Route::middleware(['auth', 'role:super_admin|admin'])
             Route::get('/pus/{pu}', [CvrReportController::class, 'show'])->name('pu');
         });
 
-        // ── Accreditation drill-down report ───────────────────────────────
         Route::prefix('accreditations')->name('accreditations.')->group(function () {
             Route::get('/', [AccreditationReportController::class, 'states'])->name('index');
             Route::get('/states/{state}/zones', [AccreditationReportController::class, 'zones'])->name('zones');
@@ -81,32 +106,36 @@ Route::middleware(['auth', 'role:super_admin|admin'])
             Route::get('/pus/{pu}', [AccreditationReportController::class, 'show'])->name('pu');
         });
 
-        // ── Manage Accreditation (CRUD) ────────────────────────────────────
-        Route::get('/manage-accreditation', [ManageAccreditationController::class, 'index'])->name('manage-accreditation.index');
-        Route::post('/manage-accreditation', [ManageAccreditationController::class, 'store'])->name('manage-accreditation.store');
-        Route::put('/manage-accreditation/{accreditation}', [ManageAccreditationController::class, 'update'])->name('manage-accreditation.update');
-        Route::delete('/manage-accreditation/{accreditation}', [ManageAccreditationController::class, 'destroy'])->name('manage-accreditation.destroy');
+        /*
+        |--------------------------------------------------------------------------
+        | Management
+        |--------------------------------------------------------------------------
+        */
 
-        // ── Active BIVAS Machines ──────────────────────────────────────────
-        Route::get('/bivas', [BivasController::class, 'index'])->name('bivas.index');
-        Route::post('/bivas', [BivasController::class, 'store'])->name('bivas.store');
-        Route::put('/bivas/{bivas}', [BivasController::class, 'update'])->name('bivas.update');
-        Route::delete('/bivas/{bivas}', [BivasController::class, 'destroy'])->name('bivas.destroy');
+        Route::resource('manage-accreditation', ManageAccreditationController::class)
+            ->parameters(['manage-accreditation' => 'accreditation'])
+            ->except(['create', 'edit', 'show']);
 
-        Route::get('/elections', [ElectionController::class, 'index'])->name('elections.index');
-        Route::post('/elections', [ElectionController::class, 'store'])->name('elections.store');
-        Route::put('/elections/{election}', [ElectionController::class, 'update'])->name('elections.update');
-        Route::delete('/elections/{election}', [ElectionController::class, 'destroy'])->name('elections.destroy');
+        Route::resource('bivas', BivasController::class)
+            ->except(['create', 'edit', 'show']);
 
-        // ── Election Readiness ────────────────────────────────────────────
-        Route::get('/elections/readiness', [ElectionController::class, 'readiness'])->name('elections.readiness');
+        Route::resource('elections', ElectionController::class)
+            ->except(['create', 'edit', 'show']);
 
-        // ── Manage Results ─────────────────────────────────────────────────
-        Route::get('/manage-results', [ResultController::class, 'index'])->name('manage-results.index');
-        Route::post('/manage-results', [ResultController::class, 'store'])->name('manage-results.store');
-        Route::put('/manage-results/{result}', [ResultController::class, 'update'])->name('manage-results.update');
-        Route::delete('/manage-results/{result}', [ResultController::class, 'destroy'])->name('manage-results.destroy');
+        Route::get('/elections/readiness', [ElectionController::class, 'readiness'])
+            ->name('elections.readiness');
 
-        // ── Staffing ───────────────────────────────────────────────────────
+        Route::resource('manage-results', ResultController::class)
+            ->parameters(['manage-results' => 'result'])
+            ->except(['create', 'edit', 'show']);
+
+        // ── Staffing ──────────────────────────────────────────────────────
         Route::get('/staff', [StaffController::class, 'index'])->name('staff.index');
+        Route::post('/staff', [StaffController::class, 'store'])->name('staff.store');
+        Route::put('/staff/{staff}', [StaffController::class, 'update'])->name('staff.update');
+        Route::delete('/staff/{staff}', [StaffController::class, 'destroy'])->name('staff.destroy');
+
+        // ── Settings ──────────────────────────────────────────────────────
+        Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
+        Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
     });

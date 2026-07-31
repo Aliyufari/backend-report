@@ -304,129 +304,191 @@ class User extends Authenticatable
         // Never show yourself.
         $query->whereKeyNot($authUser->id);
 
-        // SUPER ADMIN
+        // Super Admin sees everyone.
         if ($authUser->hasRole(RoleEnum::SUPER_ADMIN->value)) {
             return $query;
         }
 
-        // ADMIN
-        if ($authUser->hasRole(RoleEnum::ADMIN->value)) {
-            return $query->whereDoesntHave('roles', function ($q) {
-                $q->where('name', RoleEnum::SUPER_ADMIN->value);
+        /*
+        |--------------------------------------------------------------------------
+        | Role hierarchy
+        |--------------------------------------------------------------------------
+        */
+
+        $restrictedRoles = match (true) {
+
+            $authUser->hasRole(RoleEnum::ADMIN->value) => [
+                RoleEnum::SUPER_ADMIN->value,
+            ],
+
+            $authUser->hasRole(RoleEnum::GOVERNOR->value) => [
+                RoleEnum::SUPER_ADMIN->value,
+                RoleEnum::ADMIN->value,
+                RoleEnum::GOVERNOR->value,
+            ],
+
+            $authUser->hasRole(RoleEnum::STATE_COORDINATOR->value) => [
+                RoleEnum::SUPER_ADMIN->value,
+                RoleEnum::ADMIN->value,
+                RoleEnum::GOVERNOR->value,
+                RoleEnum::STATE_COORDINATOR->value,
+            ],
+
+            $authUser->hasRole(RoleEnum::ZONAL_COORDINATOR->value) => [
+                RoleEnum::SUPER_ADMIN->value,
+                RoleEnum::ADMIN->value,
+                RoleEnum::GOVERNOR->value,
+                RoleEnum::STATE_COORDINATOR->value,
+                RoleEnum::ZONAL_COORDINATOR->value,
+            ],
+
+            $authUser->hasRole(RoleEnum::LGA_COORDINATOR->value) => [
+                RoleEnum::SUPER_ADMIN->value,
+                RoleEnum::ADMIN->value,
+                RoleEnum::GOVERNOR->value,
+                RoleEnum::STATE_COORDINATOR->value,
+                RoleEnum::ZONAL_COORDINATOR->value,
+                RoleEnum::LGA_COORDINATOR->value,
+            ],
+
+            $authUser->hasRole(RoleEnum::WARD_COORDINATOR->value) => [
+                RoleEnum::SUPER_ADMIN->value,
+                RoleEnum::ADMIN->value,
+                RoleEnum::GOVERNOR->value,
+                RoleEnum::STATE_COORDINATOR->value,
+                RoleEnum::ZONAL_COORDINATOR->value,
+                RoleEnum::LGA_COORDINATOR->value,
+                RoleEnum::WARD_COORDINATOR->value,
+            ],
+
+            default => [],
+        };
+
+        if (! empty($restrictedRoles)) {
+            $query->whereDoesntHave('roles', function ($q) use ($restrictedRoles) {
+                $q->whereIn('name', $restrictedRoles);
             });
         }
 
-        // GOVERNOR
-        if ($authUser->hasRole(RoleEnum::GOVERNOR->value)) {
+        /*
+        |--------------------------------------------------------------------------
+        | Location hierarchy (Polymorphic)
+        |--------------------------------------------------------------------------
+        */
 
-            $query->whereDoesntHave('roles', function ($q) {
-                $q->whereIn('name', [
-                    RoleEnum::SUPER_ADMIN->value,
-                    RoleEnum::ADMIN->value,
-                    RoleEnum::GOVERNOR->value,
-                ]);
-            });
+        return $query->whereHasMorph(
+            'location',
+            [
+                State::class,
+                Zone::class,
+                Lga::class,
+                Ward::class,
+                Pu::class,
+            ],
+            function ($locationQuery, $type) use ($authUser) {
 
-        }
+                $locId = $authUser->location_id;
 
-        // STATE COORDINATOR
-        elseif ($authUser->hasRole(RoleEnum::STATE_COORDINATOR->value)) {
+                match ($authUser->location_type?->value) {
 
-            $query->whereDoesntHave('roles', function ($q) {
-                $q->whereIn('name', [
-                    RoleEnum::SUPER_ADMIN->value,
-                    RoleEnum::ADMIN->value,
-                    RoleEnum::GOVERNOR->value,
-                    RoleEnum::STATE_COORDINATOR->value,
-                ]);
-            });
+                    Location::STATE->value => match ($type) {
 
-        }
+                        State::class =>
+                            $locationQuery->whereKey($locId),
 
-        // ZONAL COORDINATOR
-        elseif ($authUser->hasRole(RoleEnum::ZONAL_COORDINATOR->value)) {
+                        Zone::class =>
+                            $locationQuery->where('state_id', $locId),
 
-            $query->whereDoesntHave('roles', function ($q) {
-                $q->whereIn('name', [
-                    RoleEnum::SUPER_ADMIN->value,
-                    RoleEnum::ADMIN->value,
-                    RoleEnum::GOVERNOR->value,
-                    RoleEnum::STATE_COORDINATOR->value,
-                    RoleEnum::ZONAL_COORDINATOR->value,
-                ]);
-            });
+                        Lga::class =>
+                            $locationQuery->whereHas(
+                                'zone',
+                                fn ($q) => $q->where('state_id', $locId)
+                            ),
 
-        }
+                        Ward::class =>
+                            $locationQuery->whereHas(
+                                'lga.zone',
+                                fn ($q) => $q->where('state_id', $locId)
+                            ),
 
-        // LGA COORDINATOR
-        elseif ($authUser->hasRole(RoleEnum::LGA_COORDINATOR->value)) {
+                        Pu::class =>
+                            $locationQuery->whereHas(
+                                'ward.lga.zone',
+                                fn ($q) => $q->where('state_id', $locId)
+                            ),
 
-            $query->whereDoesntHave('roles', function ($q) {
-                $q->whereIn('name', [
-                    RoleEnum::SUPER_ADMIN->value,
-                    RoleEnum::ADMIN->value,
-                    RoleEnum::GOVERNOR->value,
-                    RoleEnum::STATE_COORDINATOR->value,
-                    RoleEnum::ZONAL_COORDINATOR->value,
-                    RoleEnum::LGA_COORDINATOR->value,
-                ]);
-            });
+                        default =>
+                            $locationQuery->whereRaw('1 = 0'),
+                    },
 
-        }
+                    Location::ZONE->value => match ($type) {
 
-        // WARD COORDINATOR
-        elseif ($authUser->hasRole(RoleEnum::WARD_COORDINATOR->value)) {
+                        Zone::class =>
+                            $locationQuery->whereKey($locId),
 
-            $query->whereDoesntHave('roles', function ($q) {
-                $q->whereIn('name', [
-                    RoleEnum::SUPER_ADMIN->value,
-                    RoleEnum::ADMIN->value,
-                    RoleEnum::GOVERNOR->value,
-                    RoleEnum::STATE_COORDINATOR->value,
-                    RoleEnum::ZONAL_COORDINATOR->value,
-                    RoleEnum::LGA_COORDINATOR->value,
-                    RoleEnum::WARD_COORDINATOR->value,
-                ]);
-            });
+                        Lga::class =>
+                            $locationQuery->where('zone_id', $locId),
 
-        }
+                        Ward::class =>
+                            $locationQuery->whereHas(
+                                'lga',
+                                fn ($q) => $q->where('zone_id', $locId)
+                            ),
 
-        // Finally, apply location restriction.
-        return $query->whereHas('location', function ($locationQuery) use ($authUser) {
+                        Pu::class =>
+                            $locationQuery->whereHas(
+                                'ward.lga',
+                                fn ($q) => $q->where('zone_id', $locId)
+                            ),
 
-            match ($authUser->location_type?->value) {
+                        default =>
+                            $locationQuery->whereRaw('1 = 0'),
+                    },
 
-                Location::STATE->value =>
-                    $locationQuery->whereHas(
-                        'state',
-                        fn($q) => $q->whereKey($authUser->location_id)
-                    ),
+                    Location::LGA->value => match ($type) {
 
-                Location::ZONE->value =>
-                    $locationQuery->whereHas(
-                        'zone',
-                        fn($q) => $q->whereKey($authUser->location_id)
-                    ),
+                        Lga::class =>
+                            $locationQuery->whereKey($locId),
 
-                Location::LGA->value =>
-                    $locationQuery->whereHas(
-                        'lga',
-                        fn($q) => $q->whereKey($authUser->location_id)
-                    ),
+                        Ward::class =>
+                            $locationQuery->where('lga_id', $locId),
 
-                Location::WARD->value =>
-                    $locationQuery->whereHas(
-                        'ward',
-                        fn($q) => $q->whereKey($authUser->location_id)
-                    ),
+                        Pu::class =>
+                            $locationQuery->whereHas(
+                                'ward',
+                                fn ($q) => $q->where('lga_id', $locId)
+                            ),
 
-                Location::PU->value =>
-                    $locationQuery->whereKey($authUser->location_id),
+                        default =>
+                            $locationQuery->whereRaw('1 = 0'),
+                    },
 
-                default => null,
-            };
+                    Location::WARD->value => match ($type) {
 
-        });
+                        Ward::class =>
+                            $locationQuery->whereKey($locId),
+
+                        Pu::class =>
+                            $locationQuery->where('ward_id', $locId),
+
+                        default =>
+                            $locationQuery->whereRaw('1 = 0'),
+                    },
+
+                    Location::PU->value => match ($type) {
+
+                        Pu::class =>
+                            $locationQuery->whereKey($locId),
+
+                        default =>
+                            $locationQuery->whereRaw('1 = 0'),
+                    },
+
+                    default =>
+                        $locationQuery->whereRaw('1 = 0'),
+                };
+            }
+        );
     }
 
     public const ROLE_DASHBOARD_ROUTES = [
