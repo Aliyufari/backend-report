@@ -1,0 +1,1 @@
+import{j as s,a as n}from"./app-04eE4Dnq.js";/* empty css            */const r=({size:e=18,color:a="white"})=>s.jsx("span",{className:"inline-block animate-spin",style:{color:a},children:s.jsx(n,{size:e})});export{r as default};
